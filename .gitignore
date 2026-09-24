@@ -1,0 +1,18 @@
+# 忽略由脚本生成的只读发布产物（可由 build-readonly.js 重新生成）
+yworld-site-public/
+yworld-site/dist/
+yworld-site/build/
+
+# 项目素材与本地缓存不入库
+园区网项目/
+.workbuddy/
+.screenshots/
+
+# 常规忽略
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
