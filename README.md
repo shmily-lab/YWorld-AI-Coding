@@ -5,7 +5,7 @@
 
 **在线预览（HTTPS · 只读版）**：https://0b21c030bdc345838a1f13e52f32a5e0.app.workbuddy.host
 
-**源码仓库**：[Gitee · jysxh_code/YWorld-AI-Coding](https://gitee.com/jysxh_code/YWorld-AI-Coding) ｜ GitHub · shmily-lab/YWorld-AI-Coding
+**源码仓库**：[Gitee · jysxh_code/YWorld-AI-Coding](https://gitee.com/jysxh_code/YWorld-AI-Coding) ｜ [GitHub · shmily-lab/YWorld-AI-Coding](https://github.com/shmily-lab/-YWorld-AI-Coding)
 
 ---
 
