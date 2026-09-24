@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>园区网建设项目（真机实施版） · 项目展示</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body { font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif; background: #05080b; color: #d8efe6; }
+
+  .topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 20; display: flex; justify-content: space-between;
+            align-items: center; padding: 18px 34px; }
+  .topbar .back { color: rgba(53, 224, 176, 0.85); text-decoration: none; font-size: 13px; letter-spacing: 2px;
+                  border: 1px solid rgba(53, 224, 176, 0.3); padding: 8px 16px; border-radius: 999px;
+                  transition: all 0.25s ease; background: rgba(8, 18, 15, 0.6); }
+  .topbar .back:hover { background: rgba(53, 224, 176, 0.12); border-color: rgba(53, 224, 176, 0.6); }
+  .topbar .mark { font-size: 13px; letter-spacing: 3px; color: rgba(170, 220, 205, 0.5); }
+  .topbar .mark b { color: #eafff6; }
+  .topbar .mark i { color: #ffb347; font-style: normal; }
+
+  /* ---------- 幻灯片 ---------- */
+  .deck { position: absolute; inset: 0; }
+  .slide { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center;
+           padding: 90px 11vw; opacity: 0; transform: scale(0.985) translateY(10px);
+           transition: opacity 0.55s ease, transform 0.55s ease; pointer-events: none; }
+  .slide.active { opacity: 1; transform: none; pointer-events: all; }
+
+  .slide .eyebrow { font-size: 12px; letter-spacing: 6px; color: #35e0b0; text-transform: uppercase; margin-bottom: 22px; }
+  .slide h1 { font-size: clamp(34px, 5.2vw, 64px); font-weight: 800; line-height: 1.22; color: #f2fffa; }
+  .slide h1 .thin { font-weight: 300; color: rgba(220, 245, 235, 0.75); }
+  .slide h2 { font-size: clamp(24px, 3vw, 38px); font-weight: 700; color: #f2fffa; margin-bottom: 34px; }
+  .slide .sub { margin-top: 24px; font-size: clamp(14px, 1.4vw, 18px); line-height: 1.9; color: rgba(195, 230, 218, 0.75); max-width: 720px; }
+  .slide .rule { width: 72px; height: 3px; background: linear-gradient(90deg, #35e0b0, #ffb347); border-radius: 2px; margin: 30px 0; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
+  .chip { font-size: 13px; padding: 9px 18px; border-radius: 999px; letter-spacing: 1px;
+          border: 1px solid rgba(53, 224, 176, 0.35); background: rgba(12, 26, 22, 0.55); color: #a8ecd6; }
+  .chip.amber { border-color: rgba(255, 179, 71, 0.4); color: #ffd9a3; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 40px; max-width: 980px; }
+  .item { border-left: 2px solid rgba(53, 224, 176, 0.55); padding: 4px 0 4px 18px; }
+  .item b { display: block; font-size: 15px; color: #eafff6; margin-bottom: 5px; letter-spacing: 0.5px; }
+  .item span { font-size: 13px; line-height: 1.7; color: rgba(190, 226, 213, 0.68); }
+
+  /* 占位页 */
+  .ghost { position: relative; }
+  .ghost .big { font-size: clamp(60px, 12vw, 170px); font-weight: 800; letter-spacing: 8px;
+                color: transparent; -webkit-text-stroke: 1px rgba(53, 224, 176, 0.22); line-height: 1; user-select: none; }
+  .ghost .note { margin-top: 30px; font-size: 15px; letter-spacing: 3px; color: rgba(255, 217, 163, 0.85); }
+  .ghost .note small { display: block; margin-top: 12px; font-size: 12px; letter-spacing: 2px; color: rgba(170, 220, 205, 0.45); }
+
+  /* 背景网格与光斑 */
+  .bgline { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image: linear-gradient(rgba(53, 224, 176, 0.04) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(53, 224, 176, 0.04) 1px, transparent 1px);
+            background-size: 64px 64px; }
+  .glow { position: fixed; z-index: 0; pointer-events: none; border-radius: 50%; filter: blur(90px); }
+  .glow.g1 { width: 520px; height: 520px; right: -140px; top: -160px; background: rgba(53, 224, 176, 0.10); }
+  .glow.g2 { width: 420px; height: 420px; left: -120px; bottom: -140px; background: rgba(255, 179, 71, 0.07); }
+
+  /* ---------- 导航 ---------- */
+  .nav { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 20;
+         display: flex; align-items: center; gap: 20px; }
+  .nav button { width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(53, 224, 176, 0.35);
+                background: rgba(10, 20, 17, 0.7); color: #35e0b0; font-size: 16px; cursor: pointer;
+                transition: all 0.25s ease; }
+  .nav button:hover { background: rgba(53, 224, 176, 0.15); }
+  .dots { display: flex; gap: 9px; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(53, 224, 176, 0.25); cursor: pointer; transition: all 0.3s ease; }
+  .dots i.on { background: #35e0b0; box-shadow: 0 0 8px rgba(53, 224, 176, 0.8); }
+  .counter { position: fixed; bottom: 38px; right: 40px; z-index: 20; font-size: 13px; letter-spacing: 3px; color: rgba(160, 215, 195, 0.55); }
+  .counter b { color: #35e0b0; font-size: 17px; }
+</style>
+</head>
+<body>
+<div class="bgline"></div>
+<div class="glow g1"></div>
+<div class="glow g2"></div>
+
+<div class="topbar">
+  <a class="back" href="index.html">← 返回星球</a>
+  <div class="mark"><b>y<i>'</i>world</b>&nbsp;&nbsp;·&nbsp;&nbsp;PROJECT SHOWCASE</div>
+</div>
+
+<div class="deck">
+  <!-- Slide 1 · 封面 -->
+  <section class="slide active">
+    <div class="eyebrow">Network Engineering · Real-Device Deployment</div>
+    <h1>园区网建设项目<br><span class="thin">真机实施版</span></h1>
+    <div class="rule"></div>
+    <p class="sub">基于华为真实设备的园区网全流程交付 —— 从需求分析、拓扑设计、设备配置到验收测试与运维体系，全部配置可直接粘贴至真机执行。</p>
+    <div class="chips">
+      <span class="chip">华为 AR6120 路由器 ×4</span>
+      <span class="chip">S5720 交换机 ×4</span>
+      <span class="chip">USG6500E 防火墙</span>
+      <span class="chip">AirEngine 无线 AP</span>
+      <span class="chip amber">x86 服务器区</span>
+    </div>
+  </section>
+
+  <!-- Slide 2 · 项目概览 -->
+  <section class="slide">
+    <div class="eyebrow">Overview</div>
+    <h2>项目概览</h2>
+    <div class="grid">
+      <div class="item"><b>VLAN 与 ACL 隔离</b><span>6 个业务 VLAN 划分，接入/时间 ACL 精细化访问控制</span></div>
+      <div class="item"><b>OSPF 多区域路由</b><span>Area 0 骨干 + 三个接入区域，防火墙统一下发默认路由</span></div>
+      <div class="item"><b>防火墙安全策略</b><span>默认拒绝 + 最小权限放行，easy-ip NAT 按 VLAN 权限精细化</span></div>
+      <div class="item"><b>无线网络</b><span>Campus-WiFi SSID，WPA2-PSK，独立业务 VLAN 与 DHCP 地址池</span></div>
+      <div class="item"><b>服务器区部署</b><span>WWW / FTP / Email / 运维四台独立服务器，一键部署脚本</span></div>
+      <div class="item"><b>运维体系</b><span>SSH 管理、NTP 对时、SNMP 告警、TFTP 配置备份</span></div>
+    </div>
+  </section>
+
+  <!-- Slide 3 · 占位 -->
+  <section class="slide">
+    <div class="eyebrow">Coming Soon</div>
+    <div class="ghost">
+      <div class="big">待补充</div>
+      <div class="note">PPT 正式内容等待补充 —— 方案细节 / 拓扑图 / 实施过程
+        <small>这一页将用于展示项目实施方案与网络拓扑设计</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 4 · 占位 -->
+  <section class="slide">
+    <div class="eyebrow">Coming Soon</div>
+    <div class="ghost">
+      <div class="big">待补充</div>
+      <div class="note">PPT 正式内容等待补充 —— 验收测试 / 运维交付
+        <small>这一页将用于展示验收测试矩阵与运维交接成果</small>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="nav">
+  <button id="prev" aria-label="上一页">←</button>
+  <div class="dots" id="dots"></div>
+  <button id="next" aria-label="下一页">→</button>
+</div>
+<div class="counter"><b id="cur">1</b> / <span id="total">4</span></div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const dotsEl = document.getElementById('dots');
+let cur = 0;
+document.getElementById('total').textContent = slides.length;
+slides.forEach((_, i) => {
+  const d = document.createElement('i');
+  if (i === 0) d.classList.add('on');
+  d.addEventListener('click', () => go(i));
+  dotsEl.appendChild(d);
+});
+function go(n) {
+  cur = (n + slides.length) % slides.length;
+  slides.forEach((s, i) => s.classList.toggle('active', i === cur));
+  dotsEl.querySelectorAll('i').forEach((d, i) => d.classList.toggle('on', i === cur));
+  document.getElementById('cur').textContent = cur + 1;
+}
+document.getElementById('prev').addEventListener('click', () => go(cur - 1));
+document.getElementById('next').addEventListener('click', () => go(cur + 1));
+window.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') go(cur + 1);
+  if (e.key === 'ArrowLeft') go(cur - 1);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>y'world · 我的项目星球</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #04070a; }
+  body { font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif; color: #cfe8df; }
+  #scene { position: fixed; inset: 0; display: block; cursor: default; }
+
+  /* ---------- HUD ---------- */
+  .hud { position: fixed; z-index: 10; pointer-events: none; user-select: none; }
+  #brand { top: 34px; left: 44px; }
+  #brand .logo { font-size: 30px; font-weight: 700; letter-spacing: 1px; color: #eafff6; }
+  #brand .logo .tick { color: #ffb347; }
+  #brand .slogan { margin-top: 6px; font-size: 12px; letter-spacing: 5px; color: rgba(160, 220, 200, 0.55); text-transform: uppercase; }
+
+  #hint { bottom: 30px; left: 50%; transform: translateX(-50%); font-size: 12px; letter-spacing: 3px;
+          color: rgba(150, 210, 190, 0.45); display: flex; align-items: center; gap: 10px; }
+  #hint .dotSep { width: 3px; height: 3px; border-radius: 50%; background: rgba(53, 224, 176, 0.5); }
+
+  #stats { top: 38px; right: 46px; display: flex; gap: 18px; align-items: center; }
+  #stats .chip { display: flex; align-items: center; gap: 7px; font-size: 12px; color: rgba(170, 225, 205, 0.65);
+                 border: 1px solid rgba(53, 224, 176, 0.18); background: rgba(10, 24, 20, 0.45);
+                 padding: 7px 13px; border-radius: 999px; backdrop-filter: blur(4px); }
+  #stats .chip b { color: #35e0b0; font-weight: 600; }
+
+  /* ---------- 项目标签 ---------- */
+  #tagBox { position: fixed; z-index: 9; pointer-events: none; opacity: 0; max-width: 300px; }
+  #tagBox .card { border: 1px solid rgba(120, 240, 200, 0.35); background: rgba(6, 14, 12, 0.82);
+                  border-radius: 12px; padding: 14px 16px 13px; backdrop-filter: blur(6px);
+                  box-shadow: 0 0 24px rgba(0, 0, 0, 0.5), inset 0 0 18px rgba(53, 224, 176, 0.05); }
+  #tagBox .kicker { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 6px; opacity: 0.85; }
+  #tagBox .title { font-size: 15px; font-weight: 700; color: #f2fffa; line-height: 1.4; margin-bottom: 7px; }
+  #tagBox .desc { font-size: 12px; line-height: 1.75; color: rgba(200, 235, 222, 0.78); }
+  #tagBox .go { margin-top: 10px; font-size: 11px; letter-spacing: 1px; color: #35e0b0; opacity: 0.9; }
+
+  /* ---------- 时间线航线回放 ---------- */
+  #flightBtn { position: fixed; z-index: 11; right: 46px; bottom: 34px; cursor: pointer; user-select: none;
+               font-size: 12px; letter-spacing: 2px; color: #d9c2ff; padding: 10px 18px; border-radius: 999px;
+               border: 1px solid rgba(181, 123, 255, 0.45); background: rgba(18, 12, 28, 0.6);
+               backdrop-filter: blur(4px); transition: all 0.25s ease; }
+  #flightBtn:hover { background: rgba(181, 123, 255, 0.15); border-color: rgba(181, 123, 255, 0.8); }
+  #flightBtn.on { background: rgba(181, 123, 255, 0.22); color: #ffffff; }
+
+  #tl { position: fixed; z-index: 12; left: 50%; bottom: 64px; transform: translateX(-50%) translateY(8px);
+        width: min(560px, 72vw); opacity: 0; transition: opacity 0.4s ease, transform 0.4s ease; pointer-events: none; }
+  #tl.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #tlLabel { text-align: center; font-size: 13px; letter-spacing: 1px; color: #e6d9ff; margin-bottom: 10px; }
+  #tlLabel b { color: #c9a6ff; font-weight: 600; }
+  #tlTrack { position: relative; height: 3px; border-radius: 2px; background: rgba(181, 123, 255, 0.18); }
+  #tlFill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 2px;
+            background: linear-gradient(90deg, #7c3aed, #c9a6ff); box-shadow: 0 0 10px rgba(181, 123, 255, 0.8); }
+  #tlDots { position: relative; height: 0; }
+  #tlDots i { position: absolute; top: -4.5px; width: 12px; height: 12px; border-radius: 50%; transform: translateX(-50%);
+              background: #241a35; border: 1.5px solid rgba(181, 123, 255, 0.5); }
+  #tlDots i.on { background: #c9a6ff; border-color: #e9dcff; box-shadow: 0 0 12px rgba(181, 123, 255, 0.9); }
+
+  /* ---------- Toast ---------- */
+  #toast { position: fixed; z-index: 20; left: 50%; bottom: 76px; transform: translateX(-50%) translateY(14px);
+           background: rgba(12, 22, 19, 0.92); border: 1px solid rgba(255, 179, 71, 0.4); color: #ffd9a3;
+           font-size: 13px; letter-spacing: 1px; padding: 10px 22px; border-radius: 999px;
+           opacity: 0; transition: opacity 0.35s ease, transform 0.35s ease; pointer-events: none; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ---------- 自转速度 HUD（可拖动滑杆） ---------- */
+  #speedHud { position: fixed; z-index: 11; left: 46px; bottom: 34px;
+              background: rgba(10, 20, 18, 0.72); border: 1px solid rgba(133, 240, 201, 0.35);
+              border-radius: 10px; padding: 9px 14px 8px; width: 216px; box-sizing: border-box;
+              pointer-events: auto; user-select: none; touch-action: none;
+              opacity: 1; transform: translateY(0); transition: opacity 0.3s ease, transform 0.3s ease; }
+  #speedHud.dim { opacity: 0.45; }
+  #speedHud.show { opacity: 1; }
+  #speedHudCap { font-size: 10px; letter-spacing: 2px; color: #6fae9b; margin-bottom: 4px; }
+  #speedHudHead { display: flex; justify-content: space-between; align-items: baseline; }
+  #speedHudVal { font-size: 15px; font-weight: 600; color: #c9ffe9; letter-spacing: 1px; }
+  #speedHudHint { font-size: 9px; letter-spacing: 1px; color: #4d8574; }
+  #speedTrackWrap { position: relative; margin-top: 6px; height: 30px; cursor: pointer; }
+  #speedTrack { position: absolute; left: 0; right: 0; top: 12px; height: 4px;
+                border-radius: 2px; background: rgba(133, 240, 201, 0.15); }
+  #speedFill { position: absolute; left: 0; top: 12px; height: 4px; border-radius: 2px;
+               background: linear-gradient(90deg, #2dd4a7, #9ff5dd);
+               box-shadow: 0 0 8px rgba(120, 240, 200, 0.7); }
+  #speedFill.off { background: rgba(133, 240, 201, 0.35); box-shadow: none; }
+  #speedThumb { position: absolute; top: 6px; width: 16px; height: 16px; margin-left: -8px;
+                border-radius: 50%; background: #eafff8; border: 1px solid rgba(133, 240, 201, 0.9);
+                box-shadow: 0 0 12px rgba(120, 240, 200, 0.9); transition: transform 0.12s ease; }
+  #speedTrackWrap.drag #speedThumb { transform: scale(1.25); }
+  #speedTicks, #speedTicks * { position: absolute; }
+  #speedTicks i { top: 17px; width: 1px; height: 4px; background: rgba(133, 240, 201, 0.35); }
+  #speedTicks i.major { top: 16px; height: 6px; background: rgba(133, 240, 201, 0.7); }
+  #speedTicks b { top: 23px; font-size: 8px; font-weight: 500; color: #57a08d;
+                  transform: translateX(-50%); letter-spacing: 0; }
+
+  /* ---------- 站长模式锁 ---------- */
+  #lockBtn { position: fixed; z-index: 12; right: 46px; top: 30px; cursor: pointer;
+             background: rgba(10, 20, 18, 0.72); border: 1px solid rgba(133, 240, 201, 0.35);
+             color: #9fd8c4; font-size: 12px; letter-spacing: 1px; padding: 8px 16px; border-radius: 999px;
+             transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease; user-select: none; }
+  #lockBtn:hover { border-color: rgba(133, 240, 201, 0.8); color: #c9ffe9; }
+  #lockBtn.owner { border-color: rgba(255, 209, 102, 0.55); color: #ffd166; background: rgba(26, 22, 8, 0.72); }
+  #lockBtn.owner:hover { border-color: rgba(255, 209, 102, 0.9); color: #ffe49a; }
+  #ownerBar { position: fixed; z-index: 12; right: 46px; top: 68px; width: 168px;
+              background: rgba(26, 22, 8, 0.78); border: 1px solid rgba(255, 209, 102, 0.4);
+              border-radius: 10px; padding: 10px 12px 12px;
+              opacity: 0; transform: translateY(-6px); pointer-events: none;
+              transition: opacity 0.25s ease, transform 0.25s ease; }
+  #ownerBar.on { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  #ownerBar .obTitle { font-size: 9px; letter-spacing: 2px; color: #c79b45; margin-bottom: 8px; }
+  #ownerBar .obItem { font-size: 11px; letter-spacing: 1px; color: #ffe49a; padding: 7px 10px; border-radius: 6px;
+                      cursor: pointer; border: 1px solid rgba(255, 209, 102, 0.28); margin-bottom: 6px; text-align: center; }
+  #ownerBar .obItem:hover { background: rgba(255, 209, 102, 0.12); }
+  #ownerBar .obTip { font-size: 9px; line-height: 1.6; color: #9c8a5f; margin-top: 2px; }
+  #passModal, #delModal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+                          background: rgba(2, 6, 8, 0.55); backdrop-filter: blur(3px);
+                          opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+  #passModal.show, #delModal.show { opacity: 1; pointer-events: auto; }
+  #passModal .cmCard, #delModal .cmCard { width: min(360px, 88vw); }
+  #passInput { margin-top: 4px; }
+  #passModal .cmRow, #delModal .cmRow { display: flex; gap: 10px; margin-top: 18px; }
+  #passModal .cmRow button, #delModal .cmRow button { flex: 1; }
+
+  /* ---------- 新建项目弹窗 ---------- */
+  #createModal { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+                 background: rgba(2, 6, 8, 0.55); backdrop-filter: blur(3px);
+                 opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+  #createModal.show { opacity: 1; pointer-events: auto; }
+  .cmCard { width: min(400px, 88vw); background: rgba(8, 16, 14, 0.94); border: 1px solid rgba(133, 240, 201, 0.35);
+            border-radius: 14px; padding: 24px 26px 22px; box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+            transform: translateY(10px); transition: transform 0.25s ease; }
+  #createModal.show .cmCard { transform: translateY(0); }
+  .cmTitle { font-size: 16px; color: #d9fff1; letter-spacing: 1px; font-weight: 600; }
+  .cmSub { font-size: 11px; color: #6fae9b; margin: 6px 0 14px; line-height: 1.7; }
+  .cmCard label { display: block; font-size: 10px; letter-spacing: 2px; color: #57a08d; margin: 12px 0 5px; }
+  .cmCard input { width: 100%; box-sizing: border-box; background: rgba(133, 240, 201, 0.06);
+                  border: 1px solid rgba(133, 240, 201, 0.22); color: #d9fff1; font-size: 13px;
+                  padding: 9px 12px; border-radius: 8px; outline: none; font-family: inherit; }
+  .cmCard input:focus { border-color: rgba(133, 240, 201, 0.6); }
+  .cmBtns { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+  #createCancel, #createOk, #passCancel, #passOk, #delCancel, #delOk { font-size: 12px; letter-spacing: 1px; padding: 9px 18px; border-radius: 999px; cursor: pointer; text-align: center;
+                             user-select: none; transition: all 0.2s ease; }
+  #createCancel, #passCancel, #delCancel { color: #7ba99a; border: 1px solid rgba(133, 240, 201, 0.25); }
+  #createCancel:hover, #passCancel:hover, #delCancel:hover { background: rgba(133, 240, 201, 0.08); }
+  #createOk, #passOk, #delOk { color: #052018; background: linear-gradient(90deg, #2dd4a7, #9ff5dd); font-weight: 600; }
+  #createOk:hover, #passOk:hover, #delOk:hover { filter: brightness(1.12); }
+  #delOk { background: linear-gradient(90deg, #e8a13c, #ffd166); }
+
+  /* ---------- 跳转过渡 ---------- */
+  #fade { position: fixed; inset: 0; z-index: 50; background: #04070a; opacity: 0; pointer-events: none;
+          transition: opacity 0.5s ease; }
+  #fade.on { opacity: 1; pointer-events: all; }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div class="hud" id="brand">
+  <div class="logo">y<span class="tick">'</span>world</div>
+  <div class="slogan">MY PROJECT PLANET</div>
+</div>
+
+<div class="hud" id="stats">
+  <div class="chip"><b id="statCount">6</b> 个项目分区</div>
+  <div class="chip"><b>1</b> 个已上线</div>
+</div>
+
+<div class="hud" id="hint">
+  <span>悬停探索分区</span><span class="dotSep"></span><span>左下滑杆调节自转速度</span><span class="dotSep"></span><span>站长解锁后可增删项目</span>
+</div>
+
+<div id="tagBox">
+  <div class="card">
+    <div class="kicker" id="tagKicker">PROJECT</div>
+    <div class="title" id="tagTitle"></div>
+    <div class="desc" id="tagDesc"></div>
+    <div class="go" id="tagGo">点击花瓣，进入项目详情 →</div>
+  </div>
+</div>
+
+<div id="lockBtn">🔒 访客模式</div>
+<div id="ownerBar">
+  <div class="obTitle">站长 · 项目数据</div>
+  <div class="obItem" id="btnExport">💾 导出项目数据</div>
+  <div class="obItem" id="btnImport">📥 导入项目数据</div>
+  <div class="obTip">导出为 JSON 存好，换电脑后在此导入即可继续编辑</div>
+  <input id="importFile" type="file" accept=".json,application/json" style="display:none">
+</div>
+
+<div id="flightBtn">▶ 时间线航线回放</div>
+<div id="speedHud">
+  <div id="speedHudCap">自转速度 · 拖动 / 滚轮调节</div>
+  <div id="speedHudHead"><span id="speedHudVal">×1.0</span><span id="speedHudHint">0.5 / 格</span></div>
+  <div id="speedTrackWrap">
+    <div id="speedTrack"></div>
+    <div id="speedFill"></div>
+    <div id="speedTicks"></div>
+    <div id="speedThumb"></div>
+  </div>
+</div>
+
+<div id="createModal">
+  <div class="cmCard">
+    <div class="cmTitle">在此光点创建新项目</div>
+    <div class="cmSub">这颗光点将成为新项目的落户锚点，确认后会在球面上绽放出一朵新的花，并自动加入时间线航线。</div>
+    <label>项目名称</label>
+    <input id="createName" maxlength="24" placeholder="例如：智能家居控制系统">
+    <label>一句话介绍（可选）</label>
+    <input id="createDesc" maxlength="80" placeholder="这个项目主要做了什么">
+    <label>时间（可选，决定航线中的先后顺序）</label>
+    <input id="createYear" type="number" step="0.1" placeholder="如 2026.5（年份.月份）">
+    <div class="cmBtns">
+      <div id="createCancel">取消</div>
+      <div id="createOk">✦ 创建项目</div>
+    </div>
+  </div>
+</div>
+<div id="passModal">
+  <div class="cmCard">
+    <div class="cmTitle">站长验证</div>
+    <div class="cmSub">输入站长密码后可解锁编辑：创建 / 删除项目。访客无需密码即可浏览全部内容。</div>
+    <label>站长密码</label>
+    <input id="passInput" type="password" maxlength="32" placeholder="请输入站长密码">
+    <div class="cmRow">
+      <div id="passCancel">取消</div>
+      <div id="passOk">解锁</div>
+    </div>
+  </div>
+</div>
+
+<div id="delModal">
+  <div class="cmCard">
+    <div class="cmTitle" id="delTitle">移除项目</div>
+    <div class="cmSub" id="delSub">确认要把这朵花从星球上移除吗？该操作会同时更新时间线航线。</div>
+    <div class="cmRow">
+      <div id="delCancel" style="flex:1">取消</div>
+      <div id="delOk" style="flex:1">确认移除</div>
+    </div>
+  </div>
+</div>
+
+<div id="tl">
+  <div id="tlLabel"></div>
+  <div id="tlTrack"><div id="tlFill"></div></div>
+  <div id="tlDots"></div>
+</div>
+
+<div id="toast">该项目内容筹备中，敬请期待</div>
+<div id="fade"></div>
+
+<script>
+/* =====================================================================
+   y'world · 拓扑星球
+   深空背景 + 青绿线框球（参考 Topology Field 组件）
+   球面以花朵形状划分项目分区：悬停放大(如地图) / 整花高亮 / 虚线标注 / 点击进入 PPT
+   ===================================================================== */
+'use strict';
+
+const canvas = document.getElementById('scene');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ---------------- 小工具：向量 ---------------- */
+const V = {
+  add: (a, b) => [a[0]+b[0], a[1]+b[1], a[2]+b[2]],
+  sub: (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]],
+  scale: (a, s) => [a[0]*s, a[1]*s, a[2]*s],
+  dot: (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2],
+  cross: (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]],
+  len: a => Math.sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]),
+  norm: a => { const l = V.len(a) || 1; return [a[0]/l, a[1]/l, a[2]/l]; },
+};
+const D2R = Math.PI / 180;
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+/* lat/lon(度) -> 单位向量 */
+function latLon(lat, lon) {
+  const la = lat * D2R, lo = lon * D2R;
+  return [Math.cos(la) * Math.cos(lo), Math.sin(la), Math.cos(la) * Math.sin(lo)];
+}
+
+/* ---------------- 项目分区（花朵） ---------------- */
+/* year/era 为时间线占位：提供真实项目后替换 */
+const regions = [
+  { lat: 12, lon: -18, petals: 6, size: 0.46, hue: 165, rot: 0.2,
+    year: 2024.7, era: '2024 秋',
+    title: '园区网建设项目（真机实施版）', live: true, link: 'ppt-campus-network.html',
+    desc: '基于华为真机设备的园区网全流程交付：VLAN 划分与 ACL 隔离、OSPF 多区域路由、防火墙安全策略与 NAT、无线网络与服务器区部署，含验收测试与运维体系。' },
+  { lat: 55, lon: 62, petals: 5, size: 0.34, hue: 45, rot: 1.1,
+    year: 2025.2, era: '2025 春',
+    title: '待解锁的项目', live: false,
+    desc: '这一瓣还在酝酿之中，内容即将上线，敬请期待。' },
+  { lat: -36, lon: 38, petals: 7, size: 0.31, hue: 205, rot: 0.5,
+    year: 2025.5, era: '2025 夏',
+    title: '待解锁的项目', live: false,
+    desc: '这一瓣还在酝酿之中，内容即将上线，敬请期待。' },
+  { lat: 40, lon: 148, petals: 5, size: 0.35, hue: 265, rot: 2.0,
+    year: 2025.8, era: '2025 秋',
+    title: '待解锁的项目', live: false,
+    desc: '这一瓣还在酝酿之中，内容即将上线，敬请期待。' },
+  { lat: -28, lon: -122, petals: 6, size: 0.32, hue: 320, rot: 0.8,
+    year: 2026.1, era: '2026 春',
+    title: '待解锁的项目', live: false,
+    desc: '这一瓣还在酝酿之中，内容即将上线，敬请期待。' },
+  { lat: 4, lon: 108, petals: 8, size: 0.30, hue: 95, rot: 1.6,
+    year: 2026.4, era: '2026 夏',
+    title: '待解锁的项目', live: false,
+    desc: '这一瓣还在酝酿之中，内容即将上线，敬请期待。' },
+];
+regions.forEach(r => { r.center = latLon(r.lat, r.lon); });
+const firstLon = regions[0].lon;
+
+/* 自定义项目（光点锚点创建）持久化：localStorage 可用时读写 */
+function saveCustomRegions() {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const list = regions.filter(r => r.custom).map(r => ({
+      lat: r.lat, lon: r.lon, petals: r.petals, size: r.size, hue: r.hue, rot: r.rot,
+      year: r.year, era: r.era, title: r.title, desc: r.desc, live: false, custom: true,
+    }));
+    localStorage.setItem('yworld.custom', JSON.stringify(list));
+  } catch (e) { /* 隐私模式等场景静默跳过 */ }
+}
+(function loadCustomRegions() {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const raw = localStorage.getItem('yworld.custom');
+    if (!raw) return;
+    JSON.parse(raw).forEach(o => {
+      const r = Object.assign({ live: false, custom: true }, o);
+      r.center = latLon(r.lat, r.lon);
+      regions.push(r);
+    });
+  } catch (e) { /* 数据损坏时忽略 */ }
+})();
+
+/* ---------------- 球面散点（拓扑网） ---------------- */
+const NODE_N = 170;
+const nodes = [];
+{
+  const ga = Math.PI * (3 - Math.sqrt(5)); // 黄金角
+  for (let i = 0; i < NODE_N; i++) {
+    const y = 1 - (i / (NODE_N - 1)) * 2;
+    const rad = Math.sqrt(1 - y * y);
+    const th = ga * i;
+    nodes.push([Math.cos(th) * rad, y, Math.sin(th) * rad]);
+  }
+}
+/* k 近邻连线，形成三角网格（参考视频中的 plexus 质感） */
+const edges = [];
+{
+  const seen = new Set();
+  nodes.forEach((p, i) => {
+    const dists = nodes.map((q, j) => ({ j, d: V.dot(p, q) })).filter(o => o.j !== i)
+                      .sort((a, b) => b.d - a.d).slice(0, 3);
+    dists.forEach(({ j }) => {
+      const key = i < j ? i + '_' + j : j + '_' + i;
+      if (!seen.has(key)) { seen.add(key); edges.push([i, j]); }
+    });
+  });
+}
+
+/* ---------------- 视角与交互状态 ---------------- */
+const state = {
+  ry: -firstLon * D2R,       // 初始让第一个分区朝向镜头
+  rx: -0.32,
+  rySpeed: 0.0022,
+  zoom: 1, zoomTarget: 1,
+  anchor: [W/2, H/2], anchorTarget: [W/2, H/2],
+  hoverRegion: -1, hoverNode: -1,
+  labelAlpha: 0,
+  mouse: { x: -1e4, y: -1e4, inside: false },
+  speedMul: 1,               // 自转速度倍率（0=停转，1=默认，上限 6）；滚轮/滑杆均可调
+  _speedHudT: 0,             // HUD 全亮截止时间戳（过后降为半透明，仍可交互）
+  _wheelMuteT: 0,            // 滚轮/拖动静默截止时间戳：期间暂停悬停识别
+  _hudHover: false,          // 鼠标是否停在速度 HUD 上
+  _modalOpen: false,         // 新建项目弹窗是否打开
+};
+window.addEventListener('mousemove', e => {
+  state.mouse.x = e.clientX; state.mouse.y = e.clientY; state.mouse.inside = true;
+});
+window.addEventListener('mouseleave', () => { state.mouse.inside = false; });
+
+/* 滚轮 = 调节地球自转速度：向上滚加速、向下滚减速（可减到 0 完全停转）
+   仅在非回放状态生效；悬停花朵/光点时自转本就暂停，此时滚轮调节的是
+   "放开后的转速"，移开鼠标即按新速度转动 */
+const speedHud = document.getElementById('speedHud');
+const speedHudVal = document.getElementById('speedHudVal');
+const speedFill = document.getElementById('speedFill');
+const speedThumb = document.getElementById('speedThumb');
+const speedTrackWrap = document.getElementById('speedTrackWrap');
+const speedTicks = document.getElementById('speedTicks');
+function refreshSpeedHud() {
+  const v = state.speedMul;
+  speedHudVal.textContent = v === 0 ? '已停转' : '×' + v.toFixed(1);
+  const pct = Math.min(1, v / 6) * 100;
+  speedFill.style.width = pct + '%';
+  speedThumb.style.left = pct + '%';
+  speedFill.classList.toggle('off', v === 0);
+  speedHud.classList.add('show');
+  speedHud.classList.remove('dim');
+  state._speedHudT = performance.now() + 1600;   // 无操作 1.6s 后降为半透明（仍可交互）
+}
+/* 刻度：0.5 一小格，整数一大格并标数字 */
+{
+  const frag = document.createDocumentFragment();
+  for (let v = 0; v <= 6.0001; v += 0.5) {
+    const major = Math.abs(v - Math.round(v)) < 1e-6;
+    const tick = document.createElement('i');
+    if (major) tick.className = 'major';
+    tick.style.left = (v / 6 * 100) + '%';
+    frag.appendChild(tick);
+    if (major) {
+      const lab = document.createElement('b');
+      lab.textContent = String(Math.round(v));
+      lab.style.left = (v / 6 * 100) + '%';
+      frag.appendChild(lab);
+    }
+  }
+  speedTicks.appendChild(frag);
+}
+/* 拖动滑杆：位置 → 速度，吸附到 0.5 的倍数 */
+let speedDragging = false;
+function setSpeedFromPointer(e) {
+  const rect = speedTrackWrap.getBoundingClientRect();
+  const frac = clamp((e.clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+  state.speedMul = Math.round(frac * 6 * 2) / 2;      // 0.5 步进吸附
+  state._wheelMuteT = performance.now() + 300;         // 拖动期间暂停悬停识别
+  state.hoverRegion = -1; state.hoverNode = -1;
+  refreshSpeedHud();
+}
+speedTrackWrap.addEventListener('pointerdown', e => {
+  if (flight !== undefined && flight.active) return;   // 回放中不响应
+  if (state._modalOpen) return;
+  speedDragging = true;
+  speedTrackWrap.classList.add('drag');
+  speedTrackWrap.setPointerCapture(e.pointerId);
+  setSpeedFromPointer(e);
+});
+speedTrackWrap.addEventListener('pointermove', e => {
+  if (speedDragging) setSpeedFromPointer(e);
+});
+function endSpeedDrag() {
+  speedDragging = false;
+  speedTrackWrap.classList.remove('drag');
+  state._speedHudT = performance.now() + 1600;         // 松手后重新计时降透明
+}
+speedTrackWrap.addEventListener('pointerup', endSpeedDrag);
+speedTrackWrap.addEventListener('pointercancel', endSpeedDrag);
+/* 鼠标移入 HUD 区域时暂停悬停识别（避免选中 HUD 底下的光点），并把 HUD 点亮 */
+speedHud.addEventListener('mouseenter', () => {
+  state._hudHover = true;
+  state.hoverRegion = -1; state.hoverNode = -1;
+  speedHud.classList.add('show');
+  speedHud.classList.remove('dim');
+});
+speedHud.addEventListener('mouseleave', () => { state._hudHover = false; });
+window.addEventListener('wheel', e => {
+  if (flight !== undefined && flight.active) return;   // 回放中不响应
+  if (state._modalOpen) return;                        // 弹窗打开时不响应（避免输入时滚轮误调速）
+  state.speedMul = clamp(state.speedMul - e.deltaY * 0.0012, 0, 6);
+  state._wheelMuteT = performance.now() + 300;         // 滚动静默窗口：期间暂停悬停识别
+  state.hoverRegion = -1; state.hoverNode = -1;        // 立即清掉当前悬停，避免放大状态残留
+  refreshSpeedHud();
+}, { passive: true });
+
+/* ---------------- 投影 ---------------- */
+const FOV = 3.2;
+let RADIUS = Math.min(W, H) * 0.30;
+let camY = 0, camX = 0;
+function layout() { RADIUS = Math.min(W, H) * 0.30; camY = H * 0.5; camX = W * 0.5; }
+window.addEventListener('resize', layout); layout();
+
+const projBuf = new Float32Array(NODE_N * 4); // sx, sy, z, persp
+function projectAll() {
+  const cy = Math.cos(state.ry), sy = Math.sin(state.ry);
+  const cx = Math.cos(state.rx), sx = Math.sin(state.rx);
+  for (let i = 0; i < NODE_N; i++) {
+    const p = nodes[i];
+    const x1 = p[0]*cy + p[2]*sy, z1 = -p[0]*sy + p[2]*cy;
+    const y2 = p[1]*cx - z1*sx,  z2 = p[1]*sx + z1*cx;
+    const persp = FOV / (FOV - z2);
+    projBuf[i*4]   = camX + x1 * RADIUS * persp;
+    projBuf[i*4+1] = camY + y2 * RADIUS * persp;
+    projBuf[i*4+2] = z2;
+    projBuf[i*4+3] = persp;
+  }
+}
+function projectPoint(v) {
+  const cy = Math.cos(state.ry), sy = Math.sin(state.ry);
+  const cx = Math.cos(state.rx), sx = Math.sin(state.rx);
+  const x1 = v[0]*cy + v[2]*sy, z1 = -v[0]*sy + v[2]*cy;
+  const y2 = v[1]*cx - z1*sx,  z2 = v[1]*sx + z1*cx;
+  const persp = FOV / (FOV - z2);
+  return { x: camX + x1 * RADIUS * persp, y: camY + y2 * RADIUS * persp, z: z2, k: persp };
+}
+
+/* 花朵轮廓：在球面上以 center 为心、角半径 rr 的花瓣环 */
+function flowerOutline(reg, steps = 84) {
+  const c = reg.center;
+  let up = Math.abs(c[1]) > 0.92 ? [1, 0, 0] : [0, 1, 0];
+  const t1 = V.norm(V.cross(up, c));
+  const t2 = V.cross(c, t1);
+  const pts = [];
+  for (let i = 0; i < steps; i++) {
+    const th = (i / steps) * Math.PI * 2 + reg.rot;
+    const rr = reg.size * (0.70 + 0.32 * Math.cos(reg.petals * th));
+    const dir = V.add(V.scale(t1, Math.cos(th)), V.scale(t2, Math.sin(th)));
+    pts.push(V.add(V.scale(c, Math.cos(rr)), V.scale(dir, Math.sin(rr))));
+  }
+  return pts;
+}
+regions.forEach(r => { if (!r.outline) r.outline = flowerOutline(r); });   // 含 localStorage 载入的自定义项目
+
+/* ---------------- 缩放变换（地图式） ---------------- */
+function baseToScreen(bx, by) {
+  const A = state.anchor, ox = camX, oy = camY;
+  return [ ox + state.zoom * (bx - A[0]), oy + state.zoom * (by - A[1]) ];
+}
+function screenToBase(sx, sy) {
+  const A = state.anchor, ox = camX, oy = camY;
+  return [ A[0] + (sx - ox) / state.zoom, A[1] + (sy - oy) / state.zoom ];
+}
+
+/* ---------------- 命中检测（在未缩放空间进行，稳定无回环） ---------------- */
+function pick() {
+  if (!state.mouse.inside) { state.hoverRegion = -1; state.hoverNode = -1; return; }
+  const [bx, by] = screenToBase(state.mouse.x, state.mouse.y);
+
+  /* 1) 粘滞：已悬停的节点移出 30px 才释放 */
+  const cur = state.hoverNode;
+  if (cur >= 0) {
+    const cz = projBuf[cur*4+2];
+    if (cz >= 0.15) {
+      const cd = Math.hypot(projBuf[cur*4] - bx, projBuf[cur*4+1] - by);
+      if (cd < 30) { state.hoverRegion = -1; return; }
+    }
+    state.hoverNode = -1;
+  }
+
+  /* 2) 光点候选（进入半径 15px） */
+  let bestN = -1, bestNd = 15;
+  for (let i = 0; i < NODE_N; i++) {
+    const z = projBuf[i*4+2]; if (z < 0.15) continue;
+    const d = Math.hypot(projBuf[i*4] - bx, projBuf[i*4+1] - by);
+    if (d < bestNd) { bestNd = d; bestN = i; }
+  }
+
+  /* 3) 花朵候选：真实花瓣半径（小下限 12px 保证远端小花仍可命中）
+        —— 不再用 26px 大下限：两朵花之间的空隙归还给光点，
+          缝隙里的光点可作为"新建项目锚点"被选中 */
+  let bestR = -1, bestRd = 1e9;
+  regions.forEach((r, i) => {
+    const p = projectPoint(r.center);
+    if (p.z < 0.08) return;                       // 背面不响应
+    const rr = Math.max(r.size * RADIUS * p.k, 12);
+    const d = Math.hypot(p.x - bx, p.y - by);
+    if (d < rr && d < bestRd) { bestRd = d; bestR = i; }
+  });
+
+  /* 4) 判定优先级：光点若不在任何花朵的花瓣范围内 → 光点优先（缝隙可选）；
+        光点落在花瓣上 → 花朵优先（悬停花瓣仍是高亮整朵花） */
+  if (bestN >= 0) {
+    const nv = nodes[bestN];
+    let insideFlower = false;
+    for (const r of regions) {
+      const ang = Math.acos(clamp(V.dot(nv, r.center), -1, 1));
+      if (ang < r.size * 1.15) { insideFlower = true; break; }
+    }
+    if (!insideFlower) { state.hoverNode = bestN; state.hoverRegion = -1; return; }
+  }
+  if (bestR >= 0) { state.hoverRegion = bestR; state.hoverNode = -1; return; }
+  state.hoverRegion = -1;
+  state.hoverNode = bestN;   // 无花朵命中时允许花瓣范围外的光点
+}
+
+/* ---------------- 标签（虚线 + 文字卡） ---------------- */
+const tagBox = document.getElementById('tagBox');
+const tagKicker = document.getElementById('tagKicker');
+const tagTitle = document.getElementById('tagTitle');
+const tagDesc = document.getElementById('tagDesc');
+const tagGo = document.getElementById('tagGo');
+
+function drawLabel() {
+  const reg = regions[state.hoverRegion];
+  if (!reg || state.labelAlpha <= 0.01) { tagBox.style.opacity = 0; return; }
+  const p = projectPoint(reg.center);
+  const [sx, sy] = baseToScreen(p.x, p.y);
+  const a = state.labelAlpha;
+  const col = `hsl(${reg.hue}, 85%, 62%)`;
+
+  /* 虚线引出：从花心拉向空间更宽的一侧 */
+  const side = sx < W * 0.5 ? 1 : -1;
+  const boxW = 288;
+  const lineLen = Math.min(240, side > 0 ? W - sx - boxW - 60 : sx - boxW - 60);
+  const ex = sx + side * Math.max(lineLen, 90);
+  const ey = sy;
+
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.strokeStyle = col; ctx.lineWidth = 1.4; ctx.setLineDash([7, 7]);
+  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+  ctx.fillStyle = col; ctx.fill();
+  ctx.beginPath(); ctx.arc(ex, ey, 2.6, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  /* DOM 文字卡跟随线尾 */
+  const bx = clamp(ex + (side > 0 ? 18 : -boxW - 18), 12, W - boxW - 12);
+  const by = clamp(sy - 40, 70, H - 190);
+  tagBox.style.left = bx + 'px';
+  tagBox.style.top = by + 'px';
+  tagBox.style.opacity = a;
+  tagBox.querySelector('.card').style.borderColor = `hsla(${reg.hue}, 85%, 62%, 0.4)`;
+  tagKicker.textContent = reg.live ? 'PROJECT · 已上线' : 'COMING SOON';
+  tagKicker.style.color = reg.live ? col : 'rgba(255, 179, 71, 0.9)';
+  tagTitle.textContent = reg.title;
+  tagDesc.textContent = reg.desc;
+  tagGo.textContent = reg.live ? '点击花瓣，进入项目详情 →' : '暂不可点击，敬请期待';
+  tagGo.style.color = reg.live ? col : 'rgba(160, 210, 195, 0.4)';
+}
+
+/* ---------------- 绘制 ---------------- */
+function drawBackground() {
+  const g = ctx.createRadialGradient(W/2, H*0.42, 0, W/2, H*0.42, Math.max(W, H)*0.75);
+  g.addColorStop(0, '#0a1210');
+  g.addColorStop(0.55, '#060b0d');
+  g.addColorStop(1, '#03060a');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+
+/* 静态星尘 */
+const stars = [];
+for (let i = 0; i < 90; i++) {
+  stars.push({ x: Math.random(), y: Math.random(), r: Math.random()*1.1 + 0.3, a: Math.random()*0.4 + 0.08, ph: Math.random()*6.28 });
+}
+function drawStars(t) {
+  ctx.save();
+  stars.forEach(s => {
+    const tw = 0.6 + 0.4 * Math.sin(t*0.001 + s.ph);
+    ctx.globalAlpha = s.a * tw;
+    ctx.fillStyle = '#9fe8d2';
+    ctx.beginPath(); ctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI*2); ctx.fill();
+  });
+  ctx.restore();
+}
+
+function drawEdges() {
+  const z = state.zoom;
+  ctx.save();
+  ctx.translate(camX, camY); ctx.scale(z, z); ctx.translate(-state.anchor[0], -state.anchor[1]);
+  /* 分前后两桶批绘制 */
+  for (let pass = 0; pass < 2; pass++) {
+    ctx.beginPath();
+    edges.forEach(([i, j]) => {
+      const za = projBuf[i*4+2], zb = projBuf[j*4+2];
+      const front = (za + zb) * 0.5 > 0;
+      if ((pass === 1) === front) {
+        ctx.moveTo(projBuf[i*4], projBuf[i*4+1]);
+        ctx.lineTo(projBuf[j*4], projBuf[j*4+1]);
+      }
+    });
+    ctx.strokeStyle = pass ? 'rgba(45, 212, 168, 0.20)' : 'rgba(45, 212, 168, 0.06)';
+    ctx.lineWidth = pass ? 1 / z : 1 / z;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawNodes(t) {
+  const z = state.zoom;
+  ctx.save();
+  ctx.translate(camX, camY); ctx.scale(z, z); ctx.translate(-state.anchor[0], -state.anchor[1]);
+  for (let i = 0; i < NODE_N; i++) {
+    const zz = projBuf[i*4+2], k = projBuf[i*4+3];
+    const front = zz > 0;
+    const x = projBuf[i*4], y = projBuf[i*4+1];
+    const base = 1.15 + 1.5 * (k - 1) * 2.4;         // 近大远小
+    const pulse = 0.75 + 0.25 * Math.sin(t*0.002 + i * 1.7);
+    const r = base * (front ? 1 : 0.55) * pulse;
+    ctx.globalAlpha = front ? 0.85 : 0.22;
+    ctx.fillStyle = '#35e0b0';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+    if (front && (i % 9 === 0)) {                    // 少量光晕点
+      ctx.globalAlpha = 0.12;
+      ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, Math.PI*2); ctx.fill();
+    }
+  }
+  /* 悬停的普通节点：醒目识别（白核 + 双亮环 + 光晕），一眼看出选中的是哪一个 */
+  if (state.hoverNode >= 0 && state.hoverRegion < 0) {
+    const i = state.hoverNode;
+    const hx = projBuf[i*4], hy = projBuf[i*4+1];
+    ctx.save();
+    /* 光晕 */
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#9ff5dd';
+    ctx.beginPath(); ctx.arc(hx, hy, 16 / z, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 0.10;
+    ctx.beginPath(); ctx.arc(hx, hy, 30 / z, 0, Math.PI*2); ctx.fill();
+    /* 白核 */
+    ctx.globalAlpha = 1;
+    ctx.shadowColor = '#e6fff6'; ctx.shadowBlur = 14;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(hx, hy, 3.2 / z + 1.2, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    /* 双亮环 */
+    ctx.strokeStyle = '#d8fff0'; ctx.lineWidth = 1.6 / z;
+    ctx.beginPath(); ctx.arc(hx, hy, 9 / z + 2.5, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 0.45;
+    ctx.lineWidth = 1 / z;
+    ctx.beginPath(); ctx.arc(hx, hy, 15 / z + 4, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawFlowers(t) {
+  const z = state.zoom;
+  ctx.save();
+  ctx.translate(camX, camY); ctx.scale(z, z); ctx.translate(-state.anchor[0], -state.anchor[1]);
+  regions.forEach((r, i) => {
+    const cp = projectPoint(r.center);
+    const hov = i === state.hoverRegion || (r._bloom || 0) > 0.3;
+    const front = cp.z > 0.02;
+    const dim = front ? 1 : 0.22;
+    const col = `hsl(${r.hue}, 85%, 62%)`;
+    const path = new Path2D();
+    r.outline.forEach((v, idx) => {
+      const p = projectPoint(v);
+      idx === 0 ? path.moveTo(p.x, p.y) : path.lineTo(p.x, p.y);
+    });
+    path.closePath();
+
+    ctx.save();
+    if (hov) {
+      /* 整花高亮：霓虹填充 + 发光描边 */
+      ctx.shadowColor = col; ctx.shadowBlur = 26 * dim / z * z; // 模糊随缩放增强
+      ctx.fillStyle = `hsla(${r.hue}, 90%, 60%, ${0.16 * dim})`;
+      ctx.fill(path);
+      ctx.shadowBlur = 14;
+      ctx.strokeStyle = `hsla(${r.hue}, 95%, 68%, ${0.95 * dim})`;
+      ctx.lineWidth = 2 / z;
+    } else {
+      ctx.fillStyle = `hsla(${r.hue}, 70%, 55%, ${0.045 * dim})`;
+      ctx.fill(path);
+      ctx.strokeStyle = `hsla(${r.hue}, 80%, 62%, ${0.38 * dim})`;
+      ctx.lineWidth = 1 / z;
+    }
+    ctx.stroke(path);
+    ctx.restore();
+
+    /* 花心：可悬停的“点” */
+    const coreR = (hov ? 5.4 : 3.6) * cp.k * (front ? 1 : 0.5);
+    ctx.save();
+    ctx.globalAlpha = front ? 1 : 0.35;
+    ctx.shadowColor = col; ctx.shadowBlur = hov ? 22 : 10;
+    ctx.fillStyle = hov ? '#ffffff' : col;
+    ctx.beginPath(); ctx.arc(cp.x, cp.y, coreR, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+    /* 花心脉冲环 */
+    if (front) {
+      const pr = coreR + 6 + 3 * Math.sin(t*0.003 + i);
+      ctx.save();
+      ctx.globalAlpha = hov ? 0.75 : 0.28;
+      ctx.strokeStyle = col; ctx.lineWidth = 1 / z;
+      ctx.beginPath(); ctx.arc(cp.x, cp.y, pr, 0, Math.PI*2); ctx.stroke();
+      ctx.restore();
+    }
+  });
+  ctx.restore();
+}
+
+/* ---------------- 时间线航线回放（航班线风格） ---------------- */
+/* 按年份排序的飞行顺序：早期项目 → 后期项目（新建项目后可重建） */
+let flightOrder = regions.map((r, i) => ({ i, year: r.year }))
+  .sort((a, b) => a.year - b.year).map(o => o.i);
+
+/* 大圆弧插值 + 起飞拉升（像航班线一样拱起再落下） */
+function arcPoint(a, b, t) {
+  const d = clamp(V.dot(a, b), -1, 1);
+  const th = Math.acos(d);
+  let p;
+  if (th < 1e-4) { p = a.slice(); }
+  else {
+    const s1 = Math.sin((1 - t) * th) / Math.sin(th);
+    const s2 = Math.sin(t * th) / Math.sin(th);
+    p = V.add(V.scale(a, s1), V.scale(b, s2));
+  }
+  const lift = 1 + 0.17 * Math.sin(Math.PI * t);   // 弧线离地高度
+  return V.scale(V.norm(p), lift);
+}
+
+const flight = {
+  active: false, startTime: 0, elapsed: 0,
+  flyDur: 1920, dwellDur: 2000,          // 每段飞行(1.25×提速) / 每站停留放大 2s
+  head: null, headDir: null,
+};
+/* 总时长 = 停留 n 次 + 飞行 n-1 段（随 flightOrder 重建而更新） */
+let FLIGHT_TOTAL = flight.dwellDur * flightOrder.length + flight.flyDur * (flightOrder.length - 1);
+
+const flightBtn = document.getElementById('flightBtn');
+const tlEl = document.getElementById('tl');
+const tlLabel = document.getElementById('tlLabel');
+const tlFill = document.getElementById('tlFill');
+const tlDots = document.getElementById('tlDots');
+/* 时间线圆点（按年份位置排布）；新建项目后调用 rebuildFlight() 重排 */
+const tlDotEls = [];
+function rebuildFlight() {
+  flightOrder = regions.map((r, i) => ({ i, year: r.year }))
+    .sort((a, b) => a.year - b.year).map(o => o.i);
+  FLIGHT_TOTAL = flight.dwellDur * flightOrder.length + flight.flyDur * (flightOrder.length - 1);
+  tlDots.innerHTML = '';
+  const y0 = regions[flightOrder[0]].year, y1 = regions[flightOrder[flightOrder.length - 1]].year;
+  flightOrder.forEach(ri => {
+    const d = document.createElement('i');
+    d.style.left = (y1 === y0 ? 50 : (regions[ri].year - y0) / (y1 - y0) * 100) + '%';
+    tlDots.appendChild(d);
+  });
+  tlDotEls.length = 0;
+  for (const c of tlDots.children) tlDotEls.push(c);
+}
+rebuildFlight();
+
+flightBtn.addEventListener('click', () => {
+  if (flight.active) { endFlight(); return; }
+  flight.active = true;
+  flight.startTime = performance.now();
+  flight.elapsed = 0;
+  regions.forEach(r => { r._bloom = 0; });
+  flightBtn.textContent = '■ 结束回放';
+  flightBtn.classList.add('on');
+  tlEl.classList.add('show');
+});
+
+function endFlight() {
+  flight.active = false;
+  flightBtn.textContent = '▶ 时间线航线回放';
+  flightBtn.classList.remove('on');
+  tlEl.classList.remove('show');
+  tlFill.style.width = '0%';
+  tlDotEls.forEach(d => d.classList.remove('on'));
+  regions.forEach(r => { r._bloom = 0; });
+}
+
+/* 当前时刻所在的段与站点 */
+function flightPhase() {
+  let e = flight.elapsed;
+  for (let k = 0; k < flightOrder.length; k++) {
+    if (e < flight.dwellDur) return { type: 'dwell', stop: k, t: e / flight.dwellDur };
+    e -= flight.dwellDur;
+    if (k < flightOrder.length - 1) {
+      if (e < flight.flyDur) return { type: 'fly', seg: k, t: e / flight.flyDur };
+      e -= flight.flyDur;
+    }
+  }
+  return { type: 'done' };
+}
+
+function flightHead() {
+  const ph = flightPhase();
+  if (ph.type === 'dwell') {
+    const r = regions[flightOrder[ph.stop]];
+    return { pos: r.center, dir: null, region: ph.stop };
+  }
+  if (ph.type === 'fly') {
+    const a = regions[flightOrder[ph.seg]].center;
+    const b = regions[flightOrder[ph.seg + 1]].center;
+    return {
+      pos: arcPoint(a, b, ph.t),
+      dir: V.sub(arcPoint(a, b, Math.min(1, ph.t + 0.02)), arcPoint(a, b, ph.t)),
+      region: ph.t > 0.5 ? ph.seg + 1 : ph.seg,
+    };
+  }
+  return { pos: regions[flightOrder[flightOrder.length - 1]].center, dir: null, region: flightOrder.length - 1 };
+}
+
+function updateFlight(now) {
+  flight.elapsed = now - flight.startTime;
+  if (flight.elapsed >= FLIGHT_TOTAL) { endFlight(); return; }
+
+  const ph = flightPhase();
+  const head = flightHead();
+  flight.head = head.pos;
+  flight.headDir = head.dir;
+
+  if (ph.type === 'dwell') {
+    /* 到站：该花朵高亮 + 地图式放大，停留 2 秒 */
+    const ri = flightOrder[ph.stop];
+    state.hoverRegion = ri; state.hoverNode = -1;
+    const fp = projectPoint(regions[ri].center);
+    state.zoomTarget = 1.9;
+    state.anchorTarget = [fp.x, fp.y];
+  } else if (ph.type === 'fly') {
+    /* 飞行中：相机跟随机头，巡航缩放 */
+    state.hoverRegion = -1; state.hoverNode = -1;
+    const p = projectPoint(head.pos);
+    state.zoomTarget = 1.3;
+    state.anchorTarget = [p.x, p.y];
+  }
+
+  /* 途经花朵点亮（bloom 值 0→1 衰减发光） */
+  for (let k = 0; k <= head.region; k++) {
+    const r = regions[flightOrder[k]];
+    r._bloom = Math.max(r._bloom || 0, 1);
+  }
+  regions.forEach(r => { if (r._bloom > 0) r._bloom = Math.max(0, r._bloom - 0.0018 * 16.7); });
+
+  /* 时间线 UI */
+  tlFill.style.width = (flight.elapsed / FLIGHT_TOTAL * 100).toFixed(1) + '%';
+  tlDotEls.forEach((d, k) => d.classList.toggle('on', k <= head.region));
+  const cur = regions[flightOrder[head.region]];
+  tlLabel.innerHTML = '<b>' + cur.era + '</b> · ' + (cur.title || '项目') +
+    ' <span style="opacity:.55;font-size:11px">（' + (head.region + 1) + '/' + flightOrder.length + '）</span>';
+}
+
+function drawFlight() {
+  if (!flight.active || !flight.head) return;
+  const z = state.zoom;
+  ctx.save();
+  ctx.translate(camX, camY); ctx.scale(z, z); ctx.translate(-state.anchor[0], -state.anchor[1]);
+  const PURPLE = '#a855f7', PURPLE_SOFT = 'rgba(168, 85, 247, 0.9)', PURPLE_FAINT = 'rgba(168, 85, 247, 0.28)';
+
+  const ph = flightPhase();
+  /* 已完成段 + 当前段：整条紫色航线 */
+  const doneSegs = ph.type === 'fly' ? ph.seg : (ph.type === 'dwell' ? ph.stop : flightOrder.length - 1);
+  const partialT = ph.type === 'fly' ? ph.t : 0;
+  ctx.beginPath();
+  let drew = false;
+  for (let k = 0; k < flightOrder.length - 1; k++) {
+    if (k > doneSegs) break;
+    const endT = k < doneSegs ? 1 : partialT;
+    if (endT <= 0) continue;
+    const a = regions[flightOrder[k]].center, b = regions[flightOrder[k + 1]].center;
+    const STEPS = 36;
+    for (let s = 0; s <= STEPS; s++) {
+      const v = arcPoint(a, b, endT * s / STEPS);
+      const p = projectPoint(v);
+      if (!drew) { ctx.moveTo(p.x, p.y); drew = true; } else ctx.lineTo(p.x, p.y);
+    }
+  }
+  /* 发光底线 */
+  ctx.strokeStyle = PURPLE_FAINT; ctx.lineWidth = 5 / z; ctx.stroke();
+  ctx.strokeStyle = PURPLE_SOFT; ctx.lineWidth = 1.8 / z;
+  ctx.shadowColor = PURPLE; ctx.shadowBlur = 12;
+  ctx.stroke();
+
+  /* 机头：纸飞机式三角 + 紫色彗尾 */
+  const hp = projectPoint(flight.head);
+  let ang = -Math.PI / 2;
+  if (flight.headDir) {
+    const ahead = projectPoint(V.add(flight.head, V.scale(V.norm(flight.headDir), 0.06)));
+    ang = Math.atan2(ahead.y - hp.y, ahead.x - hp.x);
+  }
+  /* 彗尾：从机头沿路径向后渐隐 */
+  if (ph.type === 'fly') {
+    const a = regions[flightOrder[ph.seg]].center, b = regions[flightOrder[ph.seg + 1]].center;
+    const TAIL = 16;
+    for (let s = 0; s < TAIL; s++) {
+      const t0 = Math.max(0, ph.t - (s + 1) * 0.022), t1 = Math.max(0, ph.t - s * 0.022);
+      const p0 = projectPoint(arcPoint(a, b, t0)), p1 = projectPoint(arcPoint(a, b, t1));
+      ctx.strokeStyle = `rgba(201, 166, 255, ${0.55 * (1 - s / TAIL)})`;
+      ctx.lineWidth = (3.4 * (1 - s / TAIL) + 0.6) / z;
+      ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+    }
+  }
+  /* 纸飞机三角 */
+  ctx.save();
+  ctx.translate(hp.x, hp.y); ctx.rotate(ang);
+  ctx.shadowColor = '#e9dcff'; ctx.shadowBlur = 14;
+  ctx.fillStyle = '#f3ecff';
+  const S = 9 / z;
+  ctx.beginPath();
+  ctx.moveTo(S, 0); ctx.lineTo(-S * 0.75, S * 0.55); ctx.lineTo(-S * 0.45, 0); ctx.lineTo(-S * 0.75, -S * 0.55);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  /* 起点站 / 终点站标记 */
+  flightOrder.forEach((ri, k) => {
+    const r = regions[ri];
+    const p = projectPoint(r.center);
+    ctx.beginPath(); ctx.arc(p.x, p.y, 3.2 / z + 2, 0, Math.PI * 2);
+    ctx.strokeStyle = PURPLE_SOFT; ctx.lineWidth = 1.2 / z; ctx.stroke();
+  });
+  ctx.restore();
+}
+
+/* ---------------- 主循环 ---------------- */
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+}
+
+const fadeEl = document.getElementById('fade');
+
+/* ---------------- 新建项目（光点锚点） ---------------- */
+const createModal = document.getElementById('createModal');
+const createName = document.getElementById('createName');
+const createDesc = document.getElementById('createDesc');
+const createYear = document.getElementById('createYear');
+let pendingAnchor = -1;
+
+function eraLabel(y) {
+  const f = y - Math.floor(y);
+  if (f < 0.30) return Math.floor(y) + ' 春';
+  if (f < 0.62) return Math.floor(y) + ' 夏';
+  if (f < 0.88) return Math.floor(y) + ' 秋';
+  return Math.floor(y) + ' 冬';
+}
+function openCreateModal(nodeIdx) {
+  if (!state.ownerMode) { showToast('访客模式只可浏览，站长解锁后才能创建项目'); return; }
+  pendingAnchor = nodeIdx;
+  createName.value = ''; createDesc.value = ''; createYear.value = '';
+  state._modalOpen = true;
+  createModal.classList.add('show');
+  setTimeout(() => { try { createName.focus(); } catch (e) {} }, 120);
+}
+function closeCreateModal() {
+  createModal.classList.remove('show');
+  state._modalOpen = false;
+  pendingAnchor = -1;
+}
+function confirmCreate() {
+  const name = (createName.value || '').trim();
+  if (!name) { showToast('请先填写项目名称'); return; }
+  const nv = nodes[pendingAnchor];
+  if (!nv) { closeCreateModal(); return; }
+  /* 由光点的三维坐标反推经纬度，作为新项目的落户锚点 */
+  const lat = Math.asin(clamp(nv[1], -1, 1)) / D2R;
+  const lon = Math.atan2(nv[2], nv[0]) / D2R;
+  const yearRaw = parseFloat(createYear.value);
+  const y = isNaN(yearRaw) ? 2026.5 : clamp(yearRaw, 2000, 2100);
+  const r = {
+    lat, lon,
+    petals: 5 + Math.floor(Math.random() * 4),      // 5~8 瓣
+    size: 0.30, hue: Math.floor(Math.random() * 360), rot: Math.random() * Math.PI * 2,
+    year: y, era: eraLabel(y),
+    title: name, live: false, custom: true,
+    desc: (createDesc.value || '').trim() || '新落户的项目，介绍待补充。',
+    _bloom: 1,                                       // 出生动画：整朵发光渐隐
+  };
+  r.center = latLon(r.lat, r.lon);
+  r.outline = flowerOutline(r);                       // 花瓣轮廓（drawFlowers 需要）
+  regions.push(r);
+  rebuildFlight();                                   // 时间线航线自动纳入新项目
+  saveCustomRegions();
+  closeCreateModal();
+  showToast('「' + name + '」已落户星球 ✦ 点击这朵花可继续完善');
+}
+document.getElementById('createOk').addEventListener('click', confirmCreate);
+document.getElementById('createCancel').addEventListener('click', closeCreateModal);
+createModal.addEventListener('click', e => { if (e.target === createModal) closeCreateModal(); });
+window.addEventListener('keydown', e => {
+  if (!createModal.classList.contains('show')) return;
+  if (e.key === 'Escape') closeCreateModal();
+  if (e.key === 'Enter') confirmCreate();
+});
+
+/* ---------------- 站长模式（访客可看、编辑需解锁） ---------------- */
+/* 站长密码校验值：djb2 哈希（默认密码 yworld，哈希 2229505182）。
+   修改密码：把下面 PASS_HASH 换成新密码的 djb2 哈希即可
+   （可在浏览器控制台输入 ((__s)=>{let x=5381;for(const c of __s)x=((x*33)^c.charCodeAt(0))>>>0;return x})('你的新密码') 得到） */
+const PASS_HASH = 2229505182;
+function passHash(s) {
+  let x = 5381;
+  for (const c of String(s)) x = ((x * 33) ^ c.charCodeAt(0)) >>> 0;
+  return x;
+}
+state.ownerMode = false;
+try { state.ownerMode = sessionStorage.getItem('yworld.owner') === '1'; } catch (e) {}
+
+const ownerBar = document.getElementById('ownerBar');
+const lockBtn = document.getElementById('lockBtn');
+const passModal = document.getElementById('passModal');
+const passInput = document.getElementById('passInput');
+const delModal = document.getElementById('delModal');
+function updateLockBtn() {
+  lockBtn.textContent = state.ownerMode ? '🔓 站长模式' : '🔒 访客模式';
+  lockBtn.classList.toggle('owner', state.ownerMode);
+  ownerBar.classList.toggle('on', state.ownerMode);   // 站长面板（导出/导入）随之显隐
+}
+updateLockBtn();
+lockBtn.addEventListener('click', () => {
+  if (state.ownerMode) {                    // 站长 → 一键锁回访客
+    state.ownerMode = false;
+    try { sessionStorage.removeItem('yworld.owner'); } catch (e) {}
+    updateLockBtn();
+    showToast('已切回访客模式：浏览不受影响，编辑已锁定');
+  } else {
+    state._modalOpen = true;
+    passInput.value = '';
+    passModal.classList.add('show');
+    setTimeout(() => { try { passInput.focus(); } catch (e) {} }, 120);
+  }
+});
+function closePassModal() {
+  passModal.classList.remove('show');
+  state._modalOpen = false;
+}
+function tryUnlock() {
+  const v = (passInput.value || '').trim();
+  if (!v) { showToast('请输入站长密码'); return; }
+  if (passHash(v) !== PASS_HASH) { showToast('密码不对，再试试'); passInput.value = ''; return; }
+  state.ownerMode = true;
+  try { sessionStorage.setItem('yworld.owner', '1'); } catch (e) {}
+  closePassModal();
+  updateLockBtn();
+  showToast('已解锁站长模式：可以创建 / 移除项目了');
+}
+document.getElementById('passOk').addEventListener('click', tryUnlock);
+document.getElementById('passCancel').addEventListener('click', closePassModal);
+passModal.addEventListener('click', e => { if (e.target === passModal) closePassModal(); });
+
+/* 项目数据导出/导入 —— 自定义项目做成文件随身带，换电脑也能继续编辑 */
+const btnExport = document.getElementById('btnExport');
+const btnImport = document.getElementById('btnImport');
+const importFile = document.getElementById('importFile');
+function customRegionData() {
+  return regions.filter(r => r.custom).map(r => ({
+    title: r.title, desc: r.desc, year: r.year, era: r.era,
+    lat: +r.lat.toFixed(4), lon: +r.lon.toFixed(4),
+    petals: r.petals, size: r.size, hue: r.hue, rot: +r.rot.toFixed(4),
+  }));
+}
+function bakeRegion(raw) {
+  const lat = +raw.lat, lon = +raw.lon;
+  if (!isFinite(lat) || !isFinite(lon) || !raw.title) return null;
+  const y = isFinite(+raw.year) ? clamp(+raw.year, 2000, 2100) : 2026.5;
+  const r = {
+    lat, lon,
+    petals: clamp(Math.round(raw.petals || 6), 4, 9),
+    size: clamp(+raw.size || 0.30, 0.18, 0.6),
+    hue: Math.round(raw.hue || 200), rot: +raw.rot || 0,
+    year: y, era: raw.era || eraLabel(y),
+    title: String(raw.title), live: false, custom: true,
+    desc: raw.desc || '介绍待补充。', _bloom: 1,
+  };
+  r.center = latLon(r.lat, r.lon);
+  r.outline = flowerOutline(r);
+  return r;
+}
+btnExport.addEventListener('click', () => {
+  const data = customRegionData();
+  if (!data.length) { showToast('还没有自定义项目可以导出'); return; }
+  const json = JSON.stringify({ version: 1, exported: new Date().toISOString(), projects: data }, null, 2);
+  try {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'yworld-projects.json';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    showToast('已导出 ' + data.length + ' 个项目到 yworld-projects.json');
+  } catch (e) {
+    showToast('导出失败：当前环境不支持文件下载');
+  }
+});
+btnImport.addEventListener('click', () => { try { importFile.click(); } catch (e) { showToast('无法选择文件，请稍后再试'); } });
+importFile.addEventListener('change', () => {
+  const f = importFile.files && importFile.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let list = [];
+    try {
+      const parsed = JSON.parse(String(reader.result));
+      list = Array.isArray(parsed) ? parsed : (parsed.projects || []);
+    } catch (e) { showToast('文件解析失败，请确认是导出的 JSON'); importFile.value = ''; return; }
+    if (!list.length) { showToast('文件里没有项目数据'); importFile.value = ''; return; }
+    const have = new Set(regions.filter(r => r.custom).map(r => r.title + '|' + Math.round(r.lat)));
+    let added = 0;
+    list.forEach(raw => {
+      const r = bakeRegion(raw);
+      if (!r) return;
+      const key = r.title + '|' + Math.round(r.lat);
+      if (have.has(key)) return;                    // 同名同位置视为重复，跳过
+      have.add(key);
+      regions.push(r); added++;
+    });
+    if (added) { rebuildFlight(); saveCustomRegions(); }
+    showToast(added ? ('已导入 ' + added + ' 个项目' + (list.length - added ? '（跳过 ' + (list.length - added) + ' 个重复）' : '')) : '项目已全部存在，无需重复导入');
+    importFile.value = '';
+  };
+  reader.readAsText(f);
+});
+
+/* 删除项目（仅站长，右键花朵触发） */
+let pendingDel = -1;
+function askDeleteRegion(i) {
+  const r = regions[i];
+  if (!r) return;
+  if (!r.custom) { showToast('内置分区请在源码 regions 中调整'); return; }
+  pendingDel = i;
+  document.getElementById('delTitle').textContent = '移除项目 · ' + r.title;
+  state._modalOpen = true;
+  delModal.classList.add('show');
+}
+function closeDelModal() {
+  delModal.classList.remove('show');
+  state._modalOpen = false;
+  pendingDel = -1;
+}
+function confirmDelete() {
+  if (pendingDel < 0 || !regions[pendingDel]) { closeDelModal(); return; }
+  const name = regions[pendingDel].title;
+  if (state.hoverRegion === pendingDel) state.hoverRegion = -1;
+  regions.splice(pendingDel, 1);
+  rebuildFlight();
+  saveCustomRegions();
+  closeDelModal();
+  showToast('已移除「' + name + '」，时间线航线已更新');
+}
+document.getElementById('delOk').addEventListener('click', confirmDelete);
+document.getElementById('delCancel').addEventListener('click', closeDelModal);
+delModal.addEventListener('click', e => { if (e.target === delModal) closeDelModal(); });
+canvas.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  if (flight.active || state._modalOpen) return;
+  if (!state.ownerMode) return;             // 访客右键无操作
+  if (state.hoverRegion >= 0) askDeleteRegion(state.hoverRegion);
+});
+/* 密码弹窗键盘：Esc 取消 / Enter 解锁 */
+window.addEventListener('keydown', e => {
+  if (!passModal.classList.contains('show')) return;
+  if (e.key === 'Escape') closePassModal();
+  if (e.key === 'Enter') tryUnlock();
+});
+
+canvas.addEventListener('click', () => {
+  if (flight.active || state._modalOpen) return;     // 回放中 / 弹窗打开时不响应
+  const reg = regions[state.hoverRegion];
+  if (!reg) {
+    /* 悬停的是空隙里的光点 → 在此锚点创建新项目（仅站长，访客只能浏览） */
+    if (state.hoverNode >= 0) {
+      if (state.ownerMode) openCreateModal(state.hoverNode);
+      else showToast('访客模式只可浏览：点右上角锁并输入站长密码后可创建项目');
+    }
+    return;
+  }
+  if (reg.live) {
+    fadeEl.classList.add('on');
+    setTimeout(() => { window.location.href = reg.link; }, 480);
+  } else {
+    showToast('该项目内容筹备中，敬请期待');
+  }
+});
+
+let lastT = 0;
+const ease0 = dt => 1 - Math.pow(0.004, dt / 1000);   // 平滑趋近系数（适度放缓，防止悬停边界抖动放大）
+function frame(t) {
+  const dt = Math.min(33, t - lastT); lastT = t;
+
+  if (flight.active) {
+    updateFlight(t);                        // 回放时由 updateFlight 接管悬停与相机
+  } else if (t < state._wheelMuteT || state._modalOpen || state._hudHover || speedDragging) {
+    /* 滚轮滚动 / 滑杆拖动 / 新建弹窗打开 / 鼠标停在 HUD 上：暂停悬停识别 */
+  } else {
+    pick();
+  }
+
+  /* 自转：回放中锁定；悬停任何目标（花朵/光点）时完全停转
+     —— 否则目标会从鼠标下漂移，悬停反复进出，视觉上就是"卡卡的"
+     停转与恢复均做缓动，避免转速突变产生顿挫 */
+  const spinning = !flight.active && state.hoverRegion < 0 && state.hoverNode < 0;
+  state._spin = (state._spin === undefined) ? 1 : state._spin;
+  state._spin = lerp(state._spin, spinning ? 1 : 0, ease0(dt) * 0.6);
+  state.ry += 0.00008 * state._spin * state.speedMul * dt;
+
+  /* 目标缩放与锚点（地图式放大；回放时完全由 updateFlight 接管，此处跳过）
+     真正的"光标处缩放"：按目标倍率反推锚点，使光标下的世界点在缩放前后
+     屏幕位置不变 —— 目标钉死在光标下，绝不滑走。
+     公式：a_target = a + (S - cam) * (1/z - 1/zt)   （S=光标, z=当前倍率, zt=目标倍率） */
+  const hovReg = regions[state.hoverRegion];
+  if (!flight.active) {
+    if (hovReg || state.hoverNode >= 0) {
+      const zt = hovReg ? 1.9 : 1.16;
+      if (zt > 0.05) {
+        const invDz = 1 / state.zoom - 1 / zt;
+        state.anchorTarget = [
+          state.anchor[0] + (state.mouse.x - camX) * invDz,
+          state.anchor[1] + (state.mouse.y - camY) * invDz,
+        ];
+        state.zoomTarget = zt;
+      }
+    } else {
+      state.zoomTarget = 1;
+      state.anchorTarget = [camX, camY];
+    }
+  }
+
+  /* 速度 HUD：无操作 1.6s 后降为半透明（常驻可交互，不再完全隐藏） */
+  if (state._speedHudT && t > state._speedHudT && !speedDragging && !state._hudHover) {
+    speedHud.classList.add('dim');
+    speedHud.classList.remove('show');
+    state._speedHudT = 0;
+  }
+
+  const ease = ease0(dt);
+  state.zoom = lerp(state.zoom, state.zoomTarget, ease);
+  state.anchor[0] = lerp(state.anchor[0], state.anchorTarget[0], ease);
+  state.anchor[1] = lerp(state.anchor[1], state.anchorTarget[1], ease);
+
+  /* 标签透明度：悬停或到站停留时显示项目文字卡 */
+  const showLabel = !flight.active ? !!hovReg : flightPhase().type === 'dwell';
+  state.labelAlpha = lerp(state.labelAlpha, showLabel ? 1 : 0, ease);
+
+  /* 光标 */
+  canvas.style.cursor = (!flight.active && hovReg) ? 'pointer' : (state.hoverNode >= 0 ? 'crosshair' : 'default');
+
+  /* 绘制 */
+  drawBackground();
+  drawStars(t);
+  projectAll();
+  drawEdges();
+  drawFlowers(t);
+  drawNodes(t);
+  drawNodeHint(t);
+  drawFlight();
+  drawLabel();
+
+  requestAnimationFrame(frame);
+}
+
+/* 悬停空隙光点时：小气泡提示"点击可在此创建新项目" */
+function drawNodeHint(t) {
+  if (state.hoverNode < 0 || state.hoverRegion >= 0 || flight.active || state._modalOpen) return;
+  const i = state.hoverNode;
+  const [sx, sy] = baseToScreen(projBuf[i*4], projBuf[i*4+1]);
+  const txt = state.ownerMode ? '＋ 点击创建新项目' : '🔒 仅站长可在此创建项目';
+  const a = 0.75 + 0.25 * Math.sin(t * 0.004);
+  ctx.save();
+  ctx.font = '11px "Segoe UI", "Microsoft YaHei", sans-serif';
+  const w = ctx.measureText(txt).width;
+  const bx = sx + 14, by = sy - 12, bw = w + 16, bh = 22;
+  /* 气泡底 + 描边 */
+  ctx.globalAlpha = 0.92;
+  ctx.fillStyle = 'rgba(8, 18, 15, 0.9)';
+  ctx.strokeStyle = 'rgba(133, 240, 201, ' + (0.35 + 0.25 * a).toFixed(2) + ')';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  const rr = 6;
+  ctx.moveTo(bx + rr, by);
+  ctx.arcTo(bx + bw, by, bx + bw, by + bh, rr);
+  ctx.arcTo(bx + bw, by + bh, bx, by + bh, rr);
+  ctx.arcTo(bx, by + bh, bx, by, rr);
+  ctx.arcTo(bx, by, bx + bw, by, rr);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  /* 指向小三角 */
+  ctx.beginPath();
+  ctx.moveTo(bx + 2, by + bh - 1); ctx.lineTo(bx - 5, sy + 2); ctx.lineTo(bx + 12, by + bh - 1);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  /* 文字 */
+  ctx.fillStyle = 'rgba(201, 255, 233, ' + (0.75 + 0.25 * a).toFixed(2) + ')';
+  ctx.fillText(txt, bx + 8, by + 15);
+  ctx.restore();
+}
+requestAnimationFrame(frame);
+
+/* 调试/无头测试出口（不影响页面功能） */
+var __yworld = {
+  get state() { return state; },
+  regions,
+  openCreateModal, closeCreateModal, confirmCreate,
+};
+</script>
+</body>
+</html>
