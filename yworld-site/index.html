@@ -94,11 +94,8 @@
   #speedTicks b { top: 23px; font-size: 8px; font-weight: 500; color: #57a08d;
                   transform: translateX(-50%); letter-spacing: 0; }
 
-  /* ---------- 自定义光标 ---------- */
-  @media (pointer: fine) {
-    html, body, canvas, #lockBtn, #flightBtn, #soundBtn, #speedTrackWrap,
-    #ownerBar .obItem, #passOk, #passCancel, #createOk, #createCancel, #delOk, #delCancel { cursor: none; }
-  }
+  /* ---------- 自定义光标（当前关闭：恢复系统默认光标，代码保留可随时开启） ---------- */
+  #cursorWrap, .curRipple { display: none !important; }
   #cursorWrap { position: fixed; left: 0; top: 0; z-index: 100; pointer-events: none;
                 opacity: 0; transition: opacity 0.25s ease; will-change: transform; }
   #cursorWrap.on { opacity: 1; }
@@ -502,7 +499,8 @@ window.addEventListener('mouseleave', () => cursorWrap.classList.remove('on'));
 window.addEventListener('mousedown', () => cursorWrap.classList.add('press'));
 window.addEventListener('mouseup', () => cursorWrap.classList.remove('press'));
 window.addEventListener('click', e => {
-  /* 点击涟漪 */
+  /* 点击涟漪（自定义光标关闭时跳过） */
+  if (true) return;
   try {
     const rip = document.createElement('div');
     rip.className = 'curRipple';
@@ -1504,7 +1502,7 @@ function frame(t) {
   drawNodeHint(t);
   drawFlight();
   drawLabel();
-  updateCursor();                          // 自定义光标：位置跟随 + 状态变色
+  /* updateCursor(); —— 自定义光标已关闭，恢复系统默认光标 */
 
   requestAnimationFrame(frame);
 }
