@@ -94,6 +94,53 @@
   #speedTicks b { top: 23px; font-size: 8px; font-weight: 500; color: #57a08d;
                   transform: translateX(-50%); letter-spacing: 0; }
 
+  /* ---------- 自定义光标 ---------- */
+  @media (pointer: fine) {
+    html, body, canvas, #lockBtn, #flightBtn, #soundBtn, #speedTrackWrap,
+    #ownerBar .obItem, #passOk, #passCancel, #createOk, #createCancel, #delOk, #delCancel { cursor: none; }
+  }
+  #cursorWrap { position: fixed; left: 0; top: 0; z-index: 100; pointer-events: none;
+                opacity: 0; transition: opacity 0.25s ease; will-change: transform; }
+  #cursorWrap.on { opacity: 1; }
+  #curRing { position: absolute; width: 32px; height: 32px; margin: -16px 0 0 -16px; border-radius: 50%;
+             border: 1px solid rgba(133, 240, 201, 0.55);
+             box-shadow: 0 0 12px rgba(120, 240, 200, 0.32), inset 0 0 10px rgba(120, 240, 200, 0.10);
+             transition: width 0.18s ease, height 0.18s ease, margin 0.18s ease,
+                         border-color 0.18s ease, box-shadow 0.18s ease; }
+  #curRing::after { content: ''; position: absolute; inset: -5px; border-radius: 50%; opacity: 0.75;
+                    background: conic-gradient(from 0deg, transparent 0 52%, var(--cc, #a855f7) 74%, transparent 92%);
+                    -webkit-mask: radial-gradient(circle, transparent 58%, #000 60%);
+                            mask: radial-gradient(circle, transparent 58%, #000 60%);
+                    animation: curSpin 2.6s linear infinite; }
+  @keyframes curSpin { to { transform: rotate(360deg); } }
+  #curCore { position: absolute; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%;
+             background: #eafff8; box-shadow: 0 0 10px rgba(160, 255, 230, 0.9);
+             transition: background 0.18s ease, transform 0.12s ease; }
+  #curTrail { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%;
+              background: radial-gradient(circle, rgba(160, 255, 230, 0.5), rgba(160, 255, 230, 0) 70%); opacity: 0.75; }
+  #cursorWrap.onNode #curRing { width: 24px; height: 24px; margin: -12px 0 0 -12px;
+    border-color: rgba(200, 255, 238, 0.95); box-shadow: 0 0 18px rgba(120, 240, 200, 0.55); }
+  #cursorWrap.onNode #curCore { transform: scale(1.6); }
+  #cursorWrap.onFlower #curRing { width: 48px; height: 48px; margin: -24px 0 0 -24px;
+    border-color: var(--cc, #7ef0c8); box-shadow: 0 0 24px var(--cc, #7ef0c8), inset 0 0 16px rgba(255, 255, 255, 0.06); }
+  #cursorWrap.onFlower #curCore { background: var(--cc, #7ef0c8); transform: scale(0.9); }
+  #cursorWrap.onLive #curRing { border-color: rgba(255, 209, 102, 0.95); box-shadow: 0 0 26px rgba(255, 190, 80, 0.5); }
+  #cursorWrap.onLive #curCore { background: #ffe49a; }
+  #cursorWrap.press #curRing { width: 18px; height: 18px; margin: -9px 0 0 -9px; }
+  .curRipple { position: fixed; z-index: 99; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
+               pointer-events: none; border: 1.5px solid var(--cc, rgba(200, 255, 240, 0.9));
+               animation: curRipple 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) forwards; }
+  @keyframes curRipple { to { transform: scale(4.4); opacity: 0; border-width: 0.5px; } }
+
+  /* ---------- 音效开关 ---------- */
+  #soundBtn { position: fixed; z-index: 12; right: 46px; bottom: 84px; width: 44px; height: 44px;
+              border-radius: 50%; display: flex; align-items: center; justify-content: center;
+              font-size: 15px; line-height: 1; user-select: none;
+              background: rgba(10, 20, 18, 0.72); border: 1px solid rgba(133, 240, 201, 0.35); color: #9fd8c4;
+              transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease; }
+  #soundBtn:hover { border-color: rgba(133, 240, 201, 0.8); color: #c9ffe9; }
+  #soundBtn.mute { color: #6b7d76; border-color: rgba(133, 240, 201, 0.16); }
+
   /* ---------- 站长模式锁 ---------- */
   #lockBtn { position: fixed; z-index: 12; right: 46px; top: 30px; cursor: pointer;
              background: rgba(10, 20, 18, 0.72); border: 1px solid rgba(133, 240, 201, 0.35);
@@ -178,6 +225,9 @@
     <div class="go" id="tagGo">点击花瓣，进入项目详情 →</div>
   </div>
 </div>
+
+<div id="cursorWrap"><div id="curTrail"></div><div id="curRing"></div><div id="curCore"></div></div>
+<div id="soundBtn" title="音效开关">🔊</div>
 
 <div id="lockBtn">🔒 访客模式</div>
 <div id="ownerBar">
@@ -370,6 +420,119 @@ const edges = [];
       if (!seen.has(key)) { seen.add(key); edges.push([i, j]); }
     });
   });
+}
+
+/* ---------------- 音效（Web Audio 实时合成，不引入音频文件） ----------------
+   浏览器策略要求先有用户手势才允许出声，因此 AudioContext 在首次交互时懒创建 */
+const sfx = (() => {
+  let ctx = null, enabled = true;
+  try { enabled = localStorage.getItem('yworld.sound') !== 'off'; } catch (e) {}
+  function ensure() {
+    if (!enabled) return null;
+    if (!ctx) {
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        ctx = new AC();
+      } catch (e) { return null; }
+    }
+    if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) {} }
+    return ctx;
+  }
+  /* 单个音符：频率可从 freq 扫到 to，指数衰减包络 */
+  function tone(freq, to, dur, type, vol, delay) {
+    const c = ensure(); if (!c) return;
+    const t0 = c.currentTime + (delay || 0);
+    const osc = c.createOscillator(), g = c.createGain();
+    osc.type = type || 'triangle';
+    osc.frequency.setValueAtTime(freq, t0);
+    if (to) osc.frequency.exponentialRampToValueAtTime(to, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol || 0.1, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g); g.connect(c.destination);
+    osc.start(t0); osc.stop(t0 + dur + 0.02);
+  }
+  return {
+    get enabled() { return enabled; },
+    toggle() {
+      enabled = !enabled;
+      try { localStorage.setItem('yworld.sound', enabled ? 'on' : 'off'); } catch (e) {}
+      if (enabled) this.tick();
+      return enabled;
+    },
+    /* 悬停到新目标：极轻的一声"叮" */
+    tick() { tone(1180, 1560, 0.06, 'sine', 0.028, 0); },
+    /* 普通点击：清脆短音 */
+    tap() { tone(720, 1080, 0.10, 'triangle', 0.075, 0); tone(360, 540, 0.14, 'sine', 0.05, 0); },
+    /* 创建项目：向上的三音 */
+    rise() { tone(523, 523, 0.12, 'sine', 0.07, 0); tone(659, 659, 0.12, 'sine', 0.065, 0.08); tone(880, 940, 0.22, 'sine', 0.06, 0.16); },
+    /* 进入 PPT：低音铺底 + 上行扫频，有一点"传送门"的感觉 */
+    open() {
+      tone(180, 320, 0.55, 'sine', 0.09, 0);
+      tone(440, 1320, 0.40, 'triangle', 0.055, 0.06);
+      tone(660, 1760, 0.30, 'sine', 0.045, 0.14);
+    },
+    /* 未上线的项目 / 被拒绝：闷响 */
+    deny() { tone(150, 110, 0.16, 'sine', 0.07, 0); },
+    /* 解锁 / 模式切换 */
+    chime() { tone(880, 880, 0.10, 'sine', 0.06, 0); tone(1320, 1320, 0.16, 'sine', 0.05, 0.09); },
+  };
+})();
+const soundBtn = document.getElementById('soundBtn');
+function updateSoundBtn() {
+  soundBtn.textContent = sfx.enabled ? '🔊' : '🔇';
+  soundBtn.classList.toggle('mute', !sfx.enabled);
+  soundBtn.title = sfx.enabled ? '音效开 · 点击静音' : '已静音 · 点击开启';
+}
+updateSoundBtn();
+soundBtn.addEventListener('click', () => { sfx.toggle(); updateSoundBtn(); });
+
+/* ---------------- 自定义光标（三层：拖影 / 外环 / 核心） ---------------- */
+const cursorWrap = document.getElementById('cursorWrap');
+const curTrail = document.getElementById('curTrail');
+const curPos = { x: -200, y: -200 };
+const trailPos = { x: -200, y: -200 };
+let curTargetKey = '';        // 当前悬停目标，用于判定"换了个目标"并出声
+window.addEventListener('mousemove', e => {
+  curPos.x = e.clientX; curPos.y = e.clientY;
+  cursorWrap.classList.add('on');
+});
+window.addEventListener('mouseleave', () => cursorWrap.classList.remove('on'));
+window.addEventListener('mousedown', () => cursorWrap.classList.add('press'));
+window.addEventListener('mouseup', () => cursorWrap.classList.remove('press'));
+window.addEventListener('click', e => {
+  /* 点击涟漪 */
+  try {
+    const rip = document.createElement('div');
+    rip.className = 'curRipple';
+    rip.style.left = e.clientX + 'px'; rip.style.top = e.clientY + 'px';
+    const col = cursorWrap.style.getPropertyValue('--cc');
+    if (col) rip.style.setProperty('--cc', col);
+    document.body.appendChild(rip);
+    setTimeout(() => { try { rip.remove(); } catch (e2) {} }, 620);
+  } catch (e) { /* 忽略 */ }
+});
+function updateCursor() {
+  /* 拖影滞后跟随，产生流光感 */
+  trailPos.x += (curPos.x - trailPos.x) * 0.22;
+  trailPos.y += (curPos.y - trailPos.y) * 0.22;
+  cursorWrap.style.transform = 'translate3d(' + curPos.x + 'px,' + curPos.y + 'px,0)';
+  curTrail.style.transform = 'translate3d(' + (trailPos.x - curPos.x) + 'px,' + (trailPos.y - curPos.y) + 'px,0)';
+
+  /* 状态：花朵（取花色相）/ 光点 / 可进入的项目 */
+  const reg = !flight.active && state.hoverRegion >= 0 ? regions[state.hoverRegion] : null;
+  const key = reg ? ('r' + state.hoverRegion) : (state.hoverNode >= 0 ? ('n' + state.hoverNode) : '');
+  if (key !== curTargetKey) {
+    curTargetKey = key;
+    if (key) sfx.tick();                                  // 换目标时轻响一声
+  }
+  cursorWrap.classList.toggle('onFlower', !!reg);
+  cursorWrap.classList.toggle('onLive', !!(reg && reg.live));
+  cursorWrap.classList.toggle('onNode', !reg && state.hoverNode >= 0);
+  if (reg) cursorWrap.style.setProperty('--cc', 'hsl(' + reg.hue + ' 90% 66%)');
+  else if (state.hoverNode >= 0) cursorWrap.style.setProperty('--cc', '#a9ffe4');
+  else cursorWrap.style.setProperty('--cc', '#a855f7');     // 默认：紫色（与航线呼应）
 }
 
 /* ---------------- 视角与交互状态 ---------------- */
@@ -835,7 +998,8 @@ function rebuildFlight() {
 rebuildFlight();
 
 flightBtn.addEventListener('click', () => {
-  if (flight.active) { endFlight(); return; }
+  if (flight.active) { sfx.tap(); endFlight(); return; }
+  sfx.open();                                  // 起飞：与进入项目同一族音色
   flight.active = true;
   flight.startTime = performance.now();
   flight.elapsed = 0;
@@ -1061,6 +1225,7 @@ function confirmCreate() {
   rebuildFlight();                                   // 时间线航线自动纳入新项目
   saveCustomRegions();
   closeCreateModal();
+  sfx.rise();                                        // 新项目绽放：上行三音
   showToast('「' + name + '」已落户星球 ✦ 点击这朵花可继续完善');
 }
 document.getElementById('createOk').addEventListener('click', confirmCreate);
@@ -1101,8 +1266,10 @@ lockBtn.addEventListener('click', () => {
     state.ownerMode = false;
     try { sessionStorage.removeItem('yworld.owner'); } catch (e) {}
     updateLockBtn();
+    sfx.deny();
     showToast('已切回访客模式：浏览不受影响，编辑已锁定');
   } else {
+    sfx.tap();
     state._modalOpen = true;
     passInput.value = '';
     passModal.classList.add('show');
@@ -1116,11 +1283,12 @@ function closePassModal() {
 function tryUnlock() {
   const v = (passInput.value || '').trim();
   if (!v) { showToast('请输入站长密码'); return; }
-  if (passHash(v) !== PASS_HASH) { showToast('密码不对，再试试'); passInput.value = ''; return; }
+  if (passHash(v) !== PASS_HASH) { sfx.deny(); showToast('密码不对，再试试'); passInput.value = ''; return; }
   state.ownerMode = true;
   try { sessionStorage.setItem('yworld.owner', '1'); } catch (e) {}
   closePassModal();
   updateLockBtn();
+  sfx.chime();
   showToast('已解锁站长模式：可以创建 / 移除项目了');
 }
 document.getElementById('passOk').addEventListener('click', tryUnlock);
@@ -1249,15 +1417,17 @@ canvas.addEventListener('click', () => {
   if (!reg) {
     /* 悬停的是空隙里的光点 → 在此锚点创建新项目（仅站长，访客只能浏览） */
     if (state.hoverNode >= 0) {
-      if (state.ownerMode) openCreateModal(state.hoverNode);
-      else showToast('访客模式只可浏览：点右上角锁并输入站长密码后可创建项目');
+      if (state.ownerMode) { sfx.tap(); openCreateModal(state.hoverNode); }
+      else { sfx.deny(); showToast('访客模式只可浏览：点右上角锁并输入站长密码后可创建项目'); }
     }
     return;
   }
   if (reg.live) {
+    sfx.open();                                             // 传送门音效
     fadeEl.classList.add('on');
     setTimeout(() => { window.location.href = reg.link; }, 480);
   } else {
+    sfx.deny();
     showToast('该项目内容筹备中，敬请期待');
   }
 });
@@ -1334,6 +1504,7 @@ function frame(t) {
   drawNodeHint(t);
   drawFlight();
   drawLabel();
+  updateCursor();                          // 自定义光标：位置跟随 + 状态变色
 
   requestAnimationFrame(frame);
 }
