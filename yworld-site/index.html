@@ -272,7 +272,7 @@
   #hsSkip:hover { opacity: 1; }
   #handshake.live #hsStart { display: none; }
   #handshake.live #hsLine { border-top-color: rgba(120,200,170,.55); }
-  /* ---------- 像素女孩场景 ---------- */
+  /* ---------- 像素小人场景 ---------- */
   #hsGirlWrap { width: min(440px, 88vw); margin: 4px 0 4px; }
   #hsGirl { width: 100%; height: auto; display: block; image-rendering: pixelated;
             border-radius: 12px; background: #05090f;
@@ -581,7 +581,7 @@ const sfx = (() => {
     estab()  { tone(523, 523, 0.14, 'sine', 0.06, 0); tone(784, 784, 0.18, 'sine', 0.055, 0.10); tone(1046, 1046, 0.30, 'sine', 0.05, 0.20); },
     /* 解锁 / 模式切换 */
     chime() { tone(880, 880, 0.10, 'sine', 0.06, 0); tone(1320, 1320, 0.16, 'sine', 0.05, 0.09); },
-    /* 握手成功 · 女孩欢呼：快速上行琶音 + 亮闪尾音 */
+    /* 握手成功 · 小人欢呼：快速上行琶音 + 亮闪尾音 */
     cheer() {
       [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, f, 0.16, 'triangle', 0.10, i * 0.08));
       tone(1318.5, 1567.98, 0.24, 'sine', 0.05, 0.34);
@@ -1683,7 +1683,7 @@ gc.imageSmoothingEnabled = false;
 let hsRunning = false;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-/* ---------- 像素女孩场景：女孩 + 电脑 + 桌子椅子键盘 ---------- */
+/* ---------- 像素小人场景：小人 + 电脑 + 桌子椅子键盘 ---------- */
 const GW = 380, GH = 240, P = 4;
 let hsScreenLines = [];
 let hsGreen = 0, hsGreenTarget = 0;
@@ -1695,6 +1695,14 @@ pushScreen("> y'world OS boot");
 function drawGirl(now) {
   gc.clearRect(0, 0, GW, GH);
   const t = now * 0.001;
+  /* 背景小星星（黑底上闪烁，呼应像素画氛围） */
+  [[12, 4, 1.6], [47, 6, 1.2], [3, 16, 1.0], [52, 28, 1.4], [49, 17, 0.9], [58, 53, 1.2], [24, 55, 1.0]]
+    .forEach((s, i) => {
+      const a = 0.25 + 0.6 * Math.abs(Math.sin(t * s[2] + i * 1.7));
+      gc.fillStyle = 'rgba(255,255,255,' + a.toFixed(2) + ')';
+      const cx = s[0] * P, cy = s[1] * P, r = 3;
+      gc.fillRect(cx - r, cy - 1, r * 2, 2); gc.fillRect(cx - 1, cy - r, 2, r * 2);
+    });
   const cheering = hsCheer >= 0.05;
   const bounce = cheering ? -Math.abs(Math.sin(t * 12)) * 3 * hsCheer : 0;
   gc.save(); gc.translate(0, bounce * P);
@@ -1713,24 +1721,37 @@ function drawGirl(now) {
   gc.font = '7px Consolas, monospace'; gc.textBaseline = 'top';
   let ty = 13 * P + 2;
   for (const ln of hsScreenLines.slice(-5)) { gc.fillText(ln, 60 * P, ty, 30 * P); ty += 9; }
-  /* 女孩（左，朝右，戴眼镜） */
+  /* 像素小人（左，朝右）：奶白蓬松头发 + 蓝眼睛 + 米白西装浅蓝领结 */
   const bob = cheering ? 0 : Math.sin(t * 9) * 0.6;
-  px(20, 9, 21, 17, '#3c2b46');                                   // 后发
-  px(22, 12, 17, 14, '#f2c9a0');                                  // 脸
-  px(22, 12, 17, 3, '#3c2b46'); px(20, 14, 2, 10, '#3c2b46'); px(39, 14, 2, 10, '#3c2b46');
-  px(24, 17, 6, 5, '#10141a'); px(25, 18, 4, 3, '#bfeeff');       // 眼镜左
-  px(31, 17, 6, 5, '#10141a'); px(32, 18, 4, 3, '#bfeeff');       // 眼镜右
-  px(30, 18, 1, 1, '#10141a'); px(26, 19, 1, 1, '#10141a'); px(33, 19, 1, 1, '#10141a');
-  px(28, 24, 4, 1, '#c4694f');                                   // 嘴
-  px(21, 26, 19, 13, '#36c2a8'); px(21, 26, 3, 13, '#2a9c86');    // 身体
-  if (cheering) {                                                // 欢呼：双手举起
-    px(18, 11, 4, 15, '#2a9c86'); px(38, 11, 4, 15, '#2a9c86');
-    px(17, 8, 5, 4, '#f2c9a0'); px(38, 8, 5, 4, '#f2c9a0');
+  const SKIN = '#fbe0bd', HAIR = '#f0e7d6', HAIR_D = '#d9cdb4', SUIT = '#efe8da',
+        SUIT_D = '#d7cdba', SHIRT = '#aed3ee', BOW = '#7fb2e6',
+        EYE = '#2f5fd0', BLUSH = '#f4a9a2';
+  const ah = Math.round(bob);                                      // 呆毛摆动量
+  px(29 + ah, 4, 2, 2, HAIR); px(28 + ah, 6, 4, 2, HAIR);          // 呆毛
+  px(25, 5, 10, 1, HAIR); px(21, 6, 19, 1, HAIR);                  // 发顶
+  px(19, 7, 23, 15, HAIR);                                         // 蓬松头发主体
+  px(19, 19, 4, 3, HAIR_D); px(38, 19, 4, 3, HAIR_D);              // 两侧发梢阴影
+  px(23, 12, 15, 11, SKIN);                                        // 脸
+  px(22, 11, 17, 2, HAIR);                                         // 刘海
+  px(23, 13, 3, 1, HAIR); px(35, 13, 3, 1, HAIR);                  // 刘海碎块
+  px(25, 14, 4, 4, EYE); px(25, 17, 4, 1, '#1c3a8a'); px(25, 14, 1, 1, '#aacdf8');   // 左眼
+  px(33, 14, 4, 4, EYE); px(33, 17, 4, 1, '#1c3a8a'); px(33, 14, 1, 1, '#aacdf8');   // 右眼
+  px(23, 18, 2, 2, BLUSH); px(36, 18, 2, 2, BLUSH);                // 腮红
+  px(29, 20, 3, 1, '#c4694f');                                     // 嘴
+  px(20, 23, 21, 14, SUIT);                                        // 西装身体
+  px(20, 23, 2, 14, SUIT_D); px(39, 23, 2, 14, SUIT_D);            // 西装侧影
+  px(28, 23, 5, 4, SHIRT);                                         // 衬衫领口
+  px(26, 24, 2, 2, BOW); px(33, 24, 2, 2, BOW); px(29, 24, 3, 2, '#f6fafd');     // 领结
+  if (cheering) {                                                  // 欢呼：双手举起
+    px(16, 11, 4, 14, SUIT); px(41, 11, 4, 14, SUIT);
+    px(16, 22, 4, 2, SHIRT); px(41, 22, 4, 2, SHIRT);
+    px(15, 7, 5, 4, SKIN); px(41, 7, 5, 4, SKIN);
     gc.fillStyle = '#ffe27a'; gc.font = '12px monospace';
     gc.fillText('♪', 30 * P, 3 * P); gc.fillText('★', 44 * P, 5 * P);
-  } else {                                                       // 敲键盘：手随节奏上下
-    px(20, 27, 3, 9 + bob, '#2a9c86'); px(38, 27, 3, 9 - bob, '#2a9c86');
-    px(21, 36 + Math.max(0, bob), 4, 3, '#f2c9a0'); px(36, 36 - Math.max(0, bob), 4, 3, '#f2c9a0');
+  } else {                                                         // 敲键盘：手随节奏上下
+    px(20, 26, 3, 9 + bob, SUIT_D); px(38, 26, 3, 9 - bob, SUIT_D);
+    px(20, 34 + Math.max(0, bob), 3, 2, SHIRT); px(38, 34 - Math.max(0, bob), 3, 2, SHIRT);
+    px(21, 36 + Math.max(0, bob), 4, 3, SKIN); px(36, 36 - Math.max(0, bob), 4, 3, SKIN);
   }
   /* 键盘 */
   px(30, 40, 22, 4, '#cfd6dd');
