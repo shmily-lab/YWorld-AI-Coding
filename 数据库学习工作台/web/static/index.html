@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>数据库学习工作台</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --panel:#ffffff; --border:#e2e5ea; --border-strong:#cdd2da;
+    --text:#1f2328; --muted:#6b7280; --accent:#2563eb; --accent-soft:#eff4ff;
+    --ok:#16a34a; --ok-bg:#eefaf1; --fail:#dc2626; --fail-bg:#fdf0f0;
+    --warn:#b45309; --warn-bg:#fff8ea;
+    --mono:"Cascadia Code","JetBrains Mono","SFMono-Regular",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font:14px/1.6 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  header{
+    height:52px; flex:0 0 52px; display:flex; align-items:center; gap:8px;
+    padding:0 14px; background:var(--panel); border-bottom:1px solid var(--border);
+  }
+  header h1{font-size:15px;font-weight:600;margin:0;letter-spacing:.2px;white-space:nowrap}
+  .grow{flex:1}
+  .progress-wrap{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);white-space:nowrap}
+  .progress-bar{width:120px;height:6px;border-radius:3px;background:#e8ebef;overflow:hidden}
+  .progress-bar i{display:block;height:100%;background:var(--ok);width:0%;transition:width .3s}
+  button{
+    font:inherit; font-size:13px; padding:6px 11px; border-radius:6px; cursor:pointer;
+    border:1px solid var(--border-strong); background:var(--panel); color:var(--text); transition:.15s;
+  }
+  button:hover{border-color:var(--accent);color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.primary:hover{filter:brightness(1.08);color:#fff}
+  button.ghost{border-color:transparent;background:transparent}
+  button.ghost:hover{background:#f0f2f5;color:var(--text)}
+  button:disabled{opacity:.45;cursor:not-allowed;filter:none}
+  .badge{
+    display:inline-block;min-width:17px;padding:0 5px;margin-left:4px;border-radius:9px;
+    background:var(--fail);color:#fff;font-size:11px;line-height:17px;text-align:center;font-weight:600;
+  }
+  .badge.soft{background:#c9ced6;color:#fff}
+  main{flex:1;display:grid;grid-template-columns:266px 1fr 296px;gap:10px;padding:10px;min-height:0}
+  .col{display:flex;flex-direction:column;min-height:0;gap:10px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;min-height:0}
+  .card>h2{
+    margin:0; padding:10px 12px; font-size:12px; font-weight:600; color:var(--muted);
+    letter-spacing:.6px; border-bottom:1px solid var(--border);
+  }
+  .scroll{overflow:auto;padding:6px}
+  .next-box{
+    margin:6px 8px 10px; padding:9px 10px; border-radius:8px; background:var(--accent-soft);
+    border:1px solid #d6e4ff; font-size:12.5px; cursor:pointer;
+  }
+  .next-box b{display:block;font-size:11px;color:var(--accent);margin-bottom:2px}
+  .next-box:hover{filter:brightness(.98)}
+  .stage{border-bottom:1px solid #f0f2f5}
+  .stage-hd{padding:7px 10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .stage-hd:hover{background:var(--accent-soft)}
+  .stage-hd .cnt{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400}
+  .qlist{display:none;padding:0 0 4px}
+  .stage.open .qlist{display:block}
+  .qitem{
+    padding:5px 10px 5px 22px; font-size:12.5px; cursor:pointer; display:flex; gap:6px; align-items:center;
+    border-left:2px solid transparent; color:#374151;
+  }
+  .qitem:hover{background:#f3f5f8}
+  .qitem.active{background:var(--accent-soft);border-left-color:var(--accent);color:var(--accent);font-weight:600}
+  .qitem .mark{width:14px;flex:0 0 14px;text-align:center}
+  .qitem .id{color:var(--muted);font-family:var(--mono);font-size:11px}
+  .qitem.done .id{color:var(--ok)}
+  .qitem.locked{opacity:.55;cursor:not-allowed}
+  .qitem .tagmini{margin-left:auto;font-size:10px;padding:0 5px;border-radius:8px;background:#eef1f5;color:#6b7280}
+  #q-title{font-size:15px;font-weight:600;padding:10px 14px 4px;margin:0}
+  #q-meta{padding:0 14px 8px;font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .tag{padding:1px 7px;border-radius:4px;background:#eef1f5;font-size:11px;color:#4b5563}
+  .tag.mode-plan{background:#fff1e6;color:var(--warn)}
+  .tag.mode-check{background:#eef4ff;color:var(--accent)}
+  .tag.kp{background:#eefaf1;color:#146c34}
+  #prompt{padding:8px 14px 12px;border-bottom:1px solid var(--border);overflow:auto;max-height:38vh}
+  #prompt pre{background:#f6f8fa;border:1px solid var(--border);border-radius:6px;padding:8px 10px;overflow:auto;font-family:var(--mono);font-size:12px}
+  #prompt code{background:#f0f2f5;padding:1px 4px;border-radius:3px;font-family:var(--mono);font-size:12.5px}
+  #prompt pre code{background:none;padding:0}
+  #prompt ul{padding-left:20px;margin:6px 0}
+  #prompt li{margin:2px 0}
+  #prompt table{border-collapse:collapse;font-size:12.5px;margin:6px 0}
+  #prompt th,#prompt td{border:1px solid var(--border);padding:4px 8px}
+  #prompt h3{font-size:13px;margin:10px 0 4px}
+  mark.pen{background:#fff3a3;border-bottom:2px solid #f0c000;border-radius:2px;padding:0 1px;cursor:help}
+  #pen-tip{
+    position:fixed; z-index:60; background:#1f2328; color:#fff; padding:4px 9px; border-radius:6px;
+    font-size:12px; cursor:pointer; display:none; box-shadow:0 3px 10px rgba(0,0,0,.25);
+  }
+  .editor-bar{display:flex;gap:7px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .markbar{display:flex;gap:4px;margin-left:auto}
+  .markbar button{padding:3px 8px;font-size:12px}
+  .markbar button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  textarea#sql{
+    width:100%; height:128px; resize:vertical; border:0; outline:0; padding:10px 12px;
+    font-family:var(--mono); font-size:13px; line-height:1.65; color:var(--text); background:#fdfdfe;
+  }
+  .note-row{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:#fffdf5}
+  .note-row textarea{
+    flex:1; height:34px; resize:vertical; font:inherit; font-size:12.5px; padding:5px 8px;
+    border:1px solid var(--border); border-radius:6px; outline:0; background:#fff;
+  }
+  .note-row span{font-size:11.5px;color:var(--muted);align-self:center;white-space:nowrap}
+  .tabs{display:flex;gap:2px;padding:6px 12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .tab{padding:5px 12px;font-size:12.5px;cursor:pointer;color:var(--muted);border:1px solid transparent;border-bottom:none;border-radius:6px 6px 0 0}
+  .tab.active{color:var(--accent);background:var(--accent-soft);border-color:var(--border);font-weight:600}
+  .result{flex:1;overflow:auto;padding:10px 12px;min-height:110px}
+  table.grid{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:12px}
+  table.grid th,table.grid td{border:1px solid var(--border);padding:4px 8px;text-align:left;white-space:nowrap}
+  table.grid th{background:#f3f5f8;position:sticky;top:0;font-family:system-ui;font-size:12px}
+  table.grid tr:nth-child(even) td{background:#fafbfc}
+  .empty{color:var(--muted);font-size:13px;padding:8px 0}
+  .verdict{border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:13px;line-height:1.6}
+  .verdict.ok{background:var(--ok-bg);border:1px solid #b6e6c6;color:#146c34}
+  .verdict.bad{background:var(--fail-bg);border:1px solid #f3c4c4;color:#9f1d1d}
+  .verdict.err{background:var(--warn-bg);border:1px solid #f2d9a4;color:#8a4b06}
+  .diffbox{margin-top:8px;font-size:12px}
+  .diffbox h4{margin:8px 0 4px;font-size:12px;color:var(--muted)}
+  .sqlblock{background:#f6f8fa;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-family:var(--mono);font-size:12px;white-space:pre-wrap;margin:6px 0}
+  .steps{counter-reset:s}
+  .step{
+    padding:8px 10px; margin:6px 0; border-left:3px solid var(--accent);
+    background:#f8faff; border-radius:0 6px 6px 0; font-size:13px;
+  }
+  .step b{color:var(--accent)}
+  .tbl{border-bottom:1px solid #f0f2f5}
+  .tbl-hd{padding:6px 10px;font-size:12.5px;cursor:pointer;font-family:var(--mono);display:flex;gap:6px;align-items:center}
+  .tbl-hd:hover{background:#f3f5f8}
+  .tbl-hd .rows{margin-left:auto;font-size:11px;color:var(--muted);font-family:system-ui}
+  .cols{display:none;padding:2px 0 6px 10px}
+  .tbl.open .cols{display:block}
+  .colrow{font-size:11.5px;color:#4b5563;padding:1px 10px;font-family:var(--mono)}
+  .colrow .pk{color:var(--warn);font-weight:700}
+  .colrow .nn{color:var(--fail)}
+  /* 抽屉 */
+  #drawer{
+    position:fixed; top:52px; right:0; bottom:0; width:480px; background:var(--panel);
+    border-left:1px solid var(--border); box-shadow:-6px 0 22px rgba(0,0,0,.08);
+    transform:translateX(100%); transition:transform .22s ease; z-index:50;
+    display:flex; flex-direction:column;
+  }
+  #drawer.open{transform:translateX(0)}
+  #drawer .dh{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  #drawer .dh h3{margin:0;font-size:14px}
+  #drawer .db{flex:1;overflow:auto;padding:12px 14px}
+  .item{border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:8px;cursor:pointer;background:#fff}
+  .item:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .item .t{font-weight:600;font-size:13px}
+  .item .m{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .item .reason{display:inline-block;font-size:11px;padding:0 6px;border-radius:4px;background:var(--warn-bg);color:var(--warn);margin-right:6px}
+  .item .reason.bad{background:var(--fail-bg);color:var(--fail)}
+  .item .reason.ok{background:var(--ok-bg);color:var(--ok)}
+  .meter{height:7px;border-radius:4px;background:#e8ebef;overflow:hidden;margin:5px 0 2px}
+  .meter i{display:block;height:100%;background:linear-gradient(90deg,#f59e0b,#16a34a)}
+  .focus{border:1px solid #f3c4c4;background:var(--fail-bg);border-radius:8px;padding:9px 11px;margin-bottom:8px}
+  .focus h4{margin:0 0 4px;font-size:13px;color:#9f1d1d}
+  .focus .drill{font-family:var(--mono);font-size:11.5px;color:#7f1d1d}
+  .toast{
+    position:fixed;right:16px;bottom:16px;background:#1f2328;color:#fff;padding:8px 14px;
+    border-radius:8px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:99;
+  }
+  .toast.show{opacity:.95}
+  .kbd{font-family:var(--mono);font-size:11px;background:#eef1f5;border:1px solid var(--border);border-radius:3px;padding:0 4px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>数据库学习工作台</h1>
+  <button class="ghost" id="btn-review">今日复习<span class="badge soft" id="nb-review" style="display:none">0</span></button>
+  <button class="ghost" id="btn-wrong">错题集<span class="badge" id="nb-wrong" style="display:none">0</span></button>
+  <button class="ghost" id="btn-diag">薄弱诊断</button>
+  <button class="ghost" id="btn-notes">我的笔记</button>
+  <button class="ghost" id="btn-reset">重置进度</button>
+  <div class="grow"></div>
+  <div class="progress-wrap">
+    <div class="progress-bar"><i id="pg-bar"></i></div>
+    <span id="pg-text">0 / 0</span>
+  </div>
+  <button id="btn-reset-db" title="把练习用的数据库恢复到初始状态，不影响学习记录">重置练习库</button>
+</header>
+
+<main>
+  <div class="col">
+    <div class="card" style="flex:1">
+      <h2>学习路线</h2>
+      <div id="next-box"></div>
+      <div class="scroll" id="stages"></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card">
+      <h3 id="q-title">请从左侧选择一道题</h3>
+      <div id="q-meta"></div>
+      <div id="prompt"><div class="empty">选择题目后，这里会显示题面、要求与提示。<br>选中任意一段文字，可以用「标记笔」把它划下来并写批注。</div></div>
+      <div class="editor-bar">
+        <button class="primary" id="btn-run">运行 <span class="kbd">Ctrl+Enter</span></button>
+        <button id="btn-submit">提交判分 <span class="kbd">Ctrl+Shift+Enter</span></button>
+        <button id="btn-think">💡 看思路</button>
+        <button id="btn-answer">看答案</button>
+        <button class="ghost" id="btn-redo" title="清空这道题的答题记录，重新做一遍（保留笔记）">↺ 重做</button>
+        <div class="markbar">
+          <button data-mark="star" title="收藏">⭐</button>
+          <button data-mark="flag" title="标记易错，会进入复习队列">❗</button>
+          <button data-mark="done" title="自认已掌握">✓</button>
+        </div>
+      </div>
+      <textarea id="sql" spellcheck="false" placeholder="-- 在这里写 SQL，多条语句用分号分隔&#10;-- Ctrl+Enter 运行，Ctrl+Shift+Enter 提交判分"></textarea>
+      <div class="note-row">
+        <span>✎ 笔记</span>
+        <textarea id="note" placeholder="这道题你学到了什么？踩了什么坑？（自动保存）"></textarea>
+      </div>
+    </div>
+    <div class="card" style="flex:1;min-height:200px">
+      <div class="tabs">
+        <div class="tab active" data-tab="result">结果</div>
+        <div class="tab" data-tab="plan">执行计划</div>
+        <div class="tab" data-tab="diff">对比 / 反馈</div>
+        <div class="tab" data-tab="teach">讲解</div>
+      </div>
+      <div class="result" id="pane-result"><div class="empty">还没有执行过 SQL。</div></div>
+      <div class="result" id="pane-plan" style="display:none"><div class="empty">运行后这里显示 EXPLAIN QUERY PLAN（若有）。</div></div>
+      <div class="result" id="pane-diff" style="display:none"><div class="empty">提交判分后这里显示通过/失败原因与差异。</div></div>
+      <div class="result" id="pane-teach" style="display:none"><div class="empty">「💡 看思路」会逐步给方向，「看答案」直接给参考实现与讲解。</div></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card" style="flex:1">
+      <h2>数据表结构</h2>
+      <div class="scroll" id="schema"></div>
+    </div>
+  </div>
+</main>
+
+<div id="pen-tip">✎ 标记这段</div>
+<div id="drawer">
+  <div class="dh"><h3 id="d-title">面板</h3><div class="grow"></div><button class="ghost" id="d-close">关闭</button></div>
+  <div class="db" id="d-body"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const api = (path, opt) => fetch(path, opt).then(r => r.json());
+let SESSION = localStorage.getItem('dblab_session');
+if (!SESSION) { SESSION = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+  localStorage.setItem('dblab_session', SESSION); }
+let QUESTIONS = [], STAGES = {}, CURRENT = null, STEP_SHOWN = 0;
+
+/* ---------------- Markdown ---------------- */
+function md(src){
+  const blocks = [];
+  src = src.replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => {
+    blocks.push('<pre><code>' + esc(code.replace(/\n$/,'')) + '</code></pre>');
+    return '\u0000BLOCK' + (blocks.length-1) + '\u0000';
+  });
+  let html = esc(src || '');
+  html = html.replace(/`([^`\n]+)`/g, (m,c) => '<code>' + c + '</code>');
+  html = html.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  const lines = html.split('\n'), out = [];
+  let inList = false, inTable = false;
+  for (let ln of lines){
+    if (/^\u0000BLOCK\d+\u0000$/.test(ln.trim())){
+      if (inList){ out.push('</ul>'); inList=false; }
+      if (inTable){ out.push('</table>'); inTable=false; }
+      out.push(ln.trim()); continue;
+    }
+    let t = ln.trim();
+    if (/^\|.*\|$/.test(t)){
+      if (inList){ out.push('</ul>'); inList=false; }
+      const cells = t.slice(1,-1).split('|').map(s=>s.trim());
+      if (/^[-: |]+$/.test(cells.join(''))) continue;
+      if (!inTable){ out.push('<table>'); inTable=true;
+        out.push('<tr>' + cells.map(c=>'<th>'+c+'</th>').join('') + '</tr>');
+      } else out.push('<tr>' + cells.map(c=>'<td>'+c+'</td>').join('') + '</tr>');
+      continue;
+    }
+    if (inTable){ out.push('</table>'); inTable=false; }
+    if (/^[-*]\s+/.test(t)){
+      if (!inList){ out.push('<ul>'); inList=true; }
+      out.push('<li>' + t.replace(/^[-*]\s+/, '') + '</li>'); continue;
+    }
+    if (inList){ out.push('</ul>'); inList=false; }
+    if (/^#{1,4}\s/.test(t)) out.push('<h3>' + t.replace(/^#{1,4}\s/,'') + '</h3>');
+    else if (t === '') out.push('');
+    else out.push('<div>' + t + '</div>');
+  }
+  if (inList) out.push('</ul>');
+  if (inTable) out.push('</table>');
+  return out.join('\n').replace(/\u0000BLOCK(\d+)\u0000/g, (m,i)=>blocks[+i]);
+}
+const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ---------------- 标记笔：把选中的文字包进 <mark> ---------------- */
+function applyHighlights(root, hl){
+  (hl||[]).forEach(h=>{
+    const target = (h.text||'').trim();
+    if (!target) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = []; let n;
+    while ((n = walker.nextNode())) nodes.push(n);
+    for (const node of nodes){
+      const idx = node.nodeValue.indexOf(target);
+      if (idx >= 0 && node.parentElement && node.parentElement.tagName !== 'MARK'){
+        const after = node.splitText(idx);
+        after.splitText(target.length);
+        const mk = document.createElement('mark');
+        mk.className = 'pen'; mk.textContent = target;
+        if (h.note) mk.title = '批注：' + h.note;
+        after.parentNode.replaceChild(mk, after);
+        break;
+      }
+    }
+  });
+}
+let pendingSel = null;
+document.addEventListener('mouseup', e=>{
+  const tip = $('pen-tip');
+  const sel = window.getSelection();
+  const txt = sel ? sel.toString().trim() : '';
+  const host = document.getElementById('prompt');
+  const inHost = host && host.contains(sel && sel.anchorNode);
+  if (txt.length >= 4 && inHost && txt.length <= 300){
+    const r = sel.getRangeAt(0).getBoundingClientRect();
+    pendingSel = txt;
+    tip.style.display = 'block';
+    tip.style.left = Math.min(r.left, window.innerWidth - 130) + 'px';
+    tip.style.top = Math.max(60, r.top - 30) + 'px';
+  } else {
+    tip.style.display = 'none'; pendingSel = null;
+  }
+});
+$('pen-tip').onclick = async ()=>{
+  const tip = $('pen-tip'); tip.style.display = 'none';
+  if (!pendingSel || !CURRENT) return;
+  const note = prompt('为这段内容写一句批注（可留空）：\n\n' + pendingSel, '');
+  if (note === null) return;
+  const d = await api('/api/highlight', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({qid:CURRENT.id, text:pendingSel, note:note})});
+  CURRENT.highlights = d.highlights;
+  selectQuestion(CURRENT.id);
+  toast('已标记 ✅');
+};
+
+/* ---------------- 题目列表 ---------------- */
+async function loadQuestions(){
+  const d = await api('/api/questions');
+  QUESTIONS = d.questions; STAGES = d.stages;
+  const host = $('stages'); host.innerHTML = '';
+  const ids = [...new Set(QUESTIONS.map(q=>q.stage))].sort((a,b)=>a-b);
+  ids.forEach(sid=>{
+    const qs = QUESTIONS.filter(q=>q.stage===sid);
+    const done = qs.filter(q=>q.passed).length;
+    const box = document.createElement('div');
+    box.className = 'stage' + (sid===1?' open':'');
+    box.innerHTML =
+      `<div class="stage-hd"><span>${sid}. ${STAGES[sid]}</span><span class="cnt">${done}/${qs.length}</span></div>` +
+      `<div class="qlist">` + qs.map(q=>{
+        const lock = q.kind === 'review' && !q.unlocked;
+        return `<div class="qitem${q.passed?' done':''}${lock?' locked':''}" data-id="${q.id}">
+           <span class="mark">${lock?'🔒':(q.passed?'✅':'○')}</span>
+           <span class="id">${q.id}</span><span>${esc(q.title)}</span>
+           ${q.kind==='review'?'<span class="tagmini">融合</span>':''}
+           ${q.mark==='star'?'<span class="tagmini">⭐</span>':''}
+           ${q.mark==='flag'?'<span class="tagmini">❗</span>':''}
+         </div>`;}).join('') + `</div>`;
+    box.querySelector('.stage-hd').onclick = () => box.classList.toggle('open');
+    box.querySelectorAll('.qitem').forEach(it =>
+      it.onclick = () => selectQuestion(it.dataset.id));
+    host.appendChild(box);
+  });
+  updateProgress();
+  loadBadges();
+}
+function updateProgress(){
+  const t = QUESTIONS.length, p = QUESTIONS.filter(q=>q.passed).length;
+  $('pg-bar').style.width = (t? p/t*100:0) + '%';
+  $('pg-text').textContent = `${p} / ${t} 题已通过`;
+}
+async function loadBadges(){
+  const [due, mk] = await Promise.all([api('/api/due'), api('/api/mistakes')]);
+  const nd = due.due.length, nm = mk.mistakes.length;
+  $('nb-review').style.display = nd ? 'inline-block' : 'none';
+  $('nb-review').textContent = nd;
+  $('nb-wrong').style.display = nm ? 'inline-block' : 'none';
+  $('nb-wrong').textContent = nm;
+  renderNext(due.due);
+}
+function renderNext(due){
+  const box = $('next-box');
+  if (due && due.length){
+    const d = due[0];
+    box.innerHTML = `<b>▶ 今日复习（${due.length} 题待办）</b>${d.id} ${esc(d.title)}
+      <span style="color:var(--warn)">［${d.reason}］</span>`;
+    box.onclick = ()=> selectQuestion(d.id);
+    return;
+  }
+  const next = QUESTIONS.find(q=>!q.passed && q.kind !== 'review');
+  box.innerHTML = next
+    ? `<b>▶ 建议下一步</b>${next.id} ${esc(next.title)}`
+    : `<b>🎉 全部通关</b>可以去做融合题检验综合能力了`;
+  if (next) box.onclick = ()=> selectQuestion(next.id);
+}
+
+/* ---------------- 选中题目 ---------------- */
+function selectQuestion(id){
+  const q = QUESTIONS.find(x=>x.id===id);
+  if (!q) return;
+  if (q.kind === 'review' && !q.unlocked){
+    toast('完成阶段 ' + (q.requires||[]).join('、') + ' 后解锁');
+    return;
+  }
+  CURRENT = q; STEP_SHOWN = 0;
+  document.querySelectorAll('.qitem').forEach(e=>e.classList.toggle('active', e.dataset.id===id));
+  $('q-title').textContent = `${q.id}  ${q.title}`;
+  const modeTxt = {exact:'结果集比对', check:'自定义校验', plan:'执行计划断言'}[q.mode] || q.mode;
+  $('q-meta').innerHTML =
+    `<span class="tag">阶段${q.stage} ${esc(STAGES[q.stage])}</span>` +
+    `<span class="tag mode-${q.mode}">${modeTxt}</span>` +
+    `<span class="tag">${q.difficulty==='easy'?'入门':q.difficulty==='medium'?'进阶':'挑战'}</span>` +
+    `<span class="tag">${q.points} 分</span>` +
+    `<span>尝试 ${q.attempts} 次${q.fails?` · 错过 ${q.fails} 次`:''}</span>` +
+    (q.next_review ? `<span>下次复习 ${q.next_review}</span>` : '') +
+    (q.tags||[]).map(t=>`<span class="tag kp">${esc(t)}</span>`).join('');
+  $('prompt').innerHTML = md(q.prompt) +
+    (q.hint ? `<div style="margin-top:10px;padding:8px 10px;background:#fff8ea;border:1px solid #f2d9a4;border-radius:6px;font-size:12.5px;color:#8a4b06"><strong>提示：</strong>${esc(q.hint)}</div>` : '');
+  applyHighlights($('prompt'), q.highlights);
+  $('note').value = q.note || '';
+  document.querySelectorAll('.markbar button').forEach(b=>
+    b.classList.toggle('on', b.dataset.mark === q.mark));
+  ['plan','diff','teach'].forEach(t=>{ $('pane-'+t).innerHTML = '<div class="empty">—</div>'; });
+  switchTab('result');
+}
+
+/* ---------------- Schema ---------------- */
+async function loadSchema(){
+  const d = await api('/api/schema?session=' + SESSION);
+  const host = $('schema'); host.innerHTML='';
+  Object.entries(d.schema).forEach(([t, meta])=>{
+    const box = document.createElement('div');
+    box.className='tbl';
+    box.innerHTML =
+      `<div class="tbl-hd"><span>${t}</span><span class="rows">${meta.rows}</span></div>` +
+      `<div class="cols">` + meta.columns.map(c=>
+        `<div class="colrow">${c.pk?'<span class="pk">◆</span> ':'  '}${c.name}
+          <span style="color:#9aa1ab">${c.type}</span>
+          ${c.notnull?'<span class="nn">NN</span>':''}</div>`).join('') + `</div>`;
+    box.querySelector('.tbl-hd').onclick = () => box.classList.toggle('open');
+    host.appendChild(box);
+  });
+}
+
+/* ---------------- 执行 / 判分 ---------------- */
+function renderTable(cols, rows, host){
+  if (!rows || !rows.length){ host.innerHTML = '<div class="empty">没有返回行' +
+      (cols && cols.length ? '（列：'+cols.map(esc).join(', ')+'）' : '') + '。</div>'; return; }
+  let h = '<table class="grid"><tr>' + cols.map(c=>'<th>'+esc(c)+'</th>').join('') + '</tr>';
+  rows.forEach(r => h += '<tr>' + r.map(v=>'<td>'+(v===null?'<span style="color:#9aa1ab">NULL</span>':esc(v))+'</td>').join('') + '</tr>');
+  host.innerHTML = h + '</table>';
+}
+
+async function runSQL(){
+  if (!CURRENT) return toast('先选一道题');
+  const sql = $('sql').value.trim();
+  if (!sql) return toast('SQL 是空的');
+  const r = await api('/api/query', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({session:SESSION, sql})});
+  $('elapsed') && ($('elapsed').textContent='');
+  switchTab('result');
+  if (r.error) $('pane-result').innerHTML = `<div class="verdict err"><strong>执行失败</strong><br>${esc(r.error)}</div>`;
+  else {
+    renderTable(r.columns, r.rows, $('pane-result'));
+    if (r.truncated) $('pane-result').insertAdjacentHTML('beforeend','<div class="empty">结果超过 1000 行已截断。</div>');
+  }
+  loadSchema();
+}
+
+async function explain(){
+  if (!CURRENT) return toast('先选一道题');
+  const sql = $('sql').value.trim();
+  if (!sql) return toast('SQL 是空的');
+  const r = await api('/api/query', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({session:SESSION, sql:'EXPLAIN QUERY PLAN ' + sql.replace(/;\s*$/,'')})});
+  switchTab('plan');
+  if (r.error) $('pane-plan').innerHTML = `<div class="verdict err">${esc(r.error)}</div>`;
+  else renderTable(r.columns, r.rows, $('pane-plan'));
+}
+
+async function submitAnswer(){
+  if (!CURRENT) return toast('先选一道题');
+  const sql = $('sql').value.trim();
+  if (!sql) return toast('SQL 是空的');
+  const r = await api('/api/check', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({session:'__grade__'+SESSION, qid:CURRENT.id, sql})});
+  if (r.error) { toast(r.error); return; }
+  renderTable(r.columns, r.rows, $('pane-result'));
+  let h = `<div class="verdict ${r.ok?'ok':'bad'}"><strong>${r.ok?'✅ 通过':'❌ 未通过'}</strong><br>${esc(r.message)}</div>`;
+  if (r.review) h += `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+      已尝试 ${r.review.attempts} 次 · 下次复习 ${r.review.next_review || '—'}
+      ${r.ok ? '' : ' · <span style="color:var(--fail)">已记入错题本</span>'}</div>`;
+  if (r.plan && r.plan.length) h += '<div class="diffbox"><h4>执行计划</h4><ul>' +
+      r.plan.map(p=>'<li>'+esc(p)+'</li>').join('') + '</ul></div>';
+  const miss = (r.diff && r.diff.missing || []), extra = (r.diff && r.diff.extra || []);
+  if (miss.length) h += '<div class="diffbox"><h4>期望结果里有、你没查出来的行</h4>' + tableFrom(miss, r.expected_columns) + '</div>';
+  if (extra.length) h += '<div class="diffbox"><h4>你多查出来的行</h4>' + tableFrom(extra, r.columns) + '</div>';
+  $('pane-diff').innerHTML = h;
+  switchTab('diff');
+  toast(r.ok ? '通过！' : '还差一点，看「对比/反馈」标签');
+  await loadQuestions();
+  loadSchema();
+}
+function tableFrom(rows, cols){
+  let h = '<table class="grid"><tr>' + (cols||[]).map(c=>'<th>'+esc(c)+'</th>').join('') + '</tr>';
+  rows.forEach(r => h += '<tr>' + r.map(v=>'<td>'+(v===null?'NULL':esc(v))+'</td>').join('') + '</tr>');
+  return h + '</table>';
+}
+
+/* ---------------- 分层解题思路 ---------------- */
+function showNextStep(){
+  if (!CURRENT) return toast('先选一道题');
+  const steps = CURRENT.approach || [];
+  if (!steps.length){ toast('本题暂无分步思路，可直接看答案'); return; }
+  if (STEP_SHOWN >= steps.length){ toast('思路已全部给出，可以点「看答案」了'); return; }
+  STEP_SHOWN += 1;
+  const host = $('pane-teach');
+  if (STEP_SHOWN === 1) host.innerHTML = '<div class="diffbox"><h4>解题思路（逐步展开，不剧透最终 SQL）</h4><div class="steps"></div></div>';
+  const box = host.querySelector('.steps');
+  const div = document.createElement('div');
+  div.className = 'step';
+  div.innerHTML = `<b>第 ${STEP_SHOWN} 步</b>　${esc(steps[STEP_SHOWN-1])}`;
+  box.appendChild(div);
+  if (STEP_SHOWN < steps.length){
+    const more = document.createElement('button');
+    more.textContent = `继续展开第 ${STEP_SHOWN+1} 步`; more.style.marginTop = '8px';
+    more.onclick = showNextStep;
+    host.querySelector('.diffbox').appendChild(more);
+  } else {
+    host.querySelector('.diffbox').insertAdjacentHTML('beforeend',
+      '<div style="margin-top:8px;color:var(--muted);font-size:12px">思路给完了，还写不出来就点「看答案」对照一下。</div>');
+  }
+  switchTab('teach');
+}
+
+async function showAnswer(){
+  if (!CURRENT) return toast('先选一道题');
+  const d = await api('/api/answer?qid=' + CURRENT.id);
+  let h = '';
+  if ((CURRENT.approach||[]).length){
+    h += '<div class="diffbox"><h4>完整解题思路</h4><div class="steps">' +
+      CURRENT.approach.map((s,i)=>`<div class="step"><b>第 ${i+1} 步</b>　${esc(s)}</div>`).join('') + '</div></div>';
+  }
+  h += '<div class="diffbox"><h4>参考实现</h4><div class="sqlblock">' + esc(d.answer) + '</div></div>';
+  if (d.teach) h += '<div class="diffbox"><h4>知识点讲解</h4>' + md(d.teach) + '</div>';
+  $('pane-teach').innerHTML = h;
+  switchTab('teach');
+}
+
+/* ---------------- 标记与笔记 ---------------- */
+document.querySelectorAll('.markbar button').forEach(b=>{
+  b.onclick = async ()=>{
+    if (!CURRENT) return toast('先选一道题');
+    const want = CURRENT.mark === b.dataset.mark ? '' : b.dataset.mark;
+    const d = await api('/api/mark', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({qid:CURRENT.id, mark:want})});
+    CURRENT.mark = d.mark;
+    document.querySelectorAll('.markbar button').forEach(x=>
+      x.classList.toggle('on', x.dataset.mark === CURRENT.mark));
+    toast(want === 'flag' ? '已标记易错，会进入复习队列' : '标记已更新');
+    await loadQuestions();
+  };
+});
+let noteTimer = null;
+$('note').addEventListener('input', ()=>{
+  clearTimeout(noteTimer);
+  noteTimer = setTimeout(async ()=>{
+    if (!CURRENT) return;
+    await api('/api/note', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({qid:CURRENT.id, text:$('note').value})});
+    CURRENT.note = $('note').value;
+    toast('笔记已保存');
+  }, 900);
+});
+
+/* ---------------- 抽屉面板 ---------------- */
+function openDrawer(title, html){
+  $('d-title').textContent = title;
+  $('d-body').innerHTML = html;
+  $('drawer').classList.add('open');
+}
+function closeDrawer(){ $('drawer').classList.remove('open'); }
+$('d-close').onclick = closeDrawer;
+
+async function panelReview(){
+  openDrawer('今日复习', '<div class="empty">加载中…</div>');
+  const d = await api('/api/due');
+  if (!d.due.length){
+    openDrawer('今日复习', `<div class="verdict ok">今天没有到期的复习任务 🎉</div>
+      <div class="empty">新做的题 1 天后进入队列；答对则间隔逐级拉长（1/2/4/7/15/30/60 天）。
+      也可以手动给题打「❗」标记，它会立刻进队列。</div>`);
+    return;
+  }
+  const html = d.due.map(x=>`
+    <div class="item" data-id="${x.id}">
+      <div class="t">${x.id} ${esc(x.title)}</div>
+      <div class="m"><span class="reason${x.prio===0?' bad':''}">${x.reason}</span>
+        ${x.requires && x.requires.length?`综合阶段 ${x.requires.join('、')}`:''}
+        ${x.tags && x.tags.length?'· 知识点：'+x.tags.map(esc).join('、'):''}</div>
+    </div>`).join('');
+  openDrawer(`今日复习（${d.due.length}）`, html);
+  bindItems();
+}
+async function panelWrong(){
+  openDrawer('错题集', '<div class="empty">加载中…</div>');
+  const d = await api('/api/mistakes');
+  if (!d.mistakes.length){
+    openDrawer('错题集', '<div class="verdict ok">错题本是空的 ✅</div>');
+    return;
+  }
+  const html = d.mistakes.map(w=>`
+    <div class="item" data-id="${w.id}">
+      <div class="t">${w.id} ${esc(w.title)}</div>
+      <div class="m"><span class="reason bad">错 ${w.fails} 次</span>共尝试 ${w.attempts} 次</div>
+      <div class="m">知识点：${(w.tags||[]).map(esc).join('、') || '—'}</div>
+      <div class="m" style="color:var(--fail)">${esc(w.last_message)}</div>
+    </div>`).join('');
+  openDrawer(`错题集（${d.mistakes.length}）`, html);
+  bindItems();
+}
+async function panelDiagnose(){
+  openDrawer('薄弱点诊断', '<div class="empty">分析作答记录中…</div>');
+  const d = await api('/api/diagnose');
+  const o = d.overall;
+  let h = `<div class="item" style="cursor:default">
+      <div class="t">总览</div>
+      <div class="m">已练 ${o.attempted} 题 · 通过 ${o.passed} 题 ·
+        平均每题尝试 ${o.avg_attempts} 次 · 一次做对率 ${o.first_try_rate}%</div>
+    </div>`;
+  if (d.focus && d.focus.length){
+    h += '<h4 style="margin:10px 0 6px;color:#9f1d1d">⚠️ 建议优先补这几块</h4>';
+    h += d.focus.map(f=>`
+      <div class="focus">
+        <h4>${esc(f.tag)} — ${f.level}${f.quality!==null?`（掌握度 ${Math.round(f.quality*100)}%）`:''}</h4>
+        <div class="m">${esc(f.reason)}</div>
+        <div class="drill">重点练：${f.drill.join('、')}</div>
+      </div>`).join('');
+  } else {
+    h += '<div class="verdict ok">暂时没有明显短板 👍</div>';
+  }
+  h += '<h4 style="margin:12px 0 6px">各知识点掌握度</h4>';
+  h += d.tags.map(b=>{
+    const q = b.quality;
+    const pct = q===null ? '未练习' : Math.round(q*100)+'%';
+    const w = q===null ? 0 : Math.round(q*100);
+    return `<div style="margin-bottom:7px">
+      <div style="display:flex;font-size:12.5px"><span>${esc(b.tag)}</span>
+        <span style="margin-left:auto;color:var(--muted)">${pct} · ${b.level}</span></div>
+      <div class="meter"><i style="width:${w}%"></i></div></div>`;
+  }).join('');
+  openDrawer('薄弱点诊断', h);
+  bindItems();
+}
+async function panelNotes(){
+  const d = await api('/api/notes');
+  openDrawer('我的笔记与标记', `<div class="sqlblock" style="white-space:pre-wrap">${esc(d.markdown)}</div>`);
+}
+function bindItems(){
+  $('d-body').querySelectorAll('.item[data-id]').forEach(it=>{
+    it.onclick = ()=>{ selectQuestion(it.dataset.id); closeDrawer(); };
+  });
+}
+
+/* ---------------- 重置学习记录 ---------------- */
+const post = (path, body) => api(path, {method:'POST',
+  headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{})});
+
+async function redoCurrent(){
+  if (!CURRENT) return toast('先选一道题');
+  if (!confirm(`清空「${CURRENT.id} ${CURRENT.title}」的答题记录，重新做一遍？\n\n笔记、标记与划重点会保留。`)) return;
+  await post('/api/reset-progress', {scope:'question', qid:CURRENT.id, hard:false});
+  const id = CURRENT.id;
+  await loadQuestions();
+  selectQuestion(id);
+  toast('已重置，可以重做了 ↺');
+}
+
+function panelReset(){
+  const cur = CURRENT;
+  const opts = Object.keys(STAGES).map(k=>`<option value="${k}">${k}. ${STAGES[k]}</option>`).join('');
+  openDrawer('重置学习记录', `
+    <div class="verdict err" style="margin-bottom:10px">
+      这里重置的是<b>答题记录</b>（次数 / 通过状态 / 错题 / 复习排期），
+      不动练习用的数据库。要还原数据库请用顶栏「重置练习库」。
+    </div>
+    <label style="font-size:12.5px;display:flex;gap:6px;align-items:center;margin-bottom:10px">
+      <input type="checkbox" id="chk-hard"> 连笔记、标记、划重点一起清掉
+    </label>
+    ${cur ? `<div class="item" id="rs-one">
+        <div class="t">↺ 重做当前这道题</div>
+        <div class="m">${cur.id} ${esc(cur.title)}</div></div>` : ''}
+    <div class="item" id="rs-stage">
+      <div class="t">重置某个阶段</div>
+      <div class="m">清空该阶段所有题的答题记录，便于整章重做</div>
+      <select id="sel-stage" style="margin-top:6px;font:inherit;font-size:12.5px;padding:3px 6px;border:1px solid var(--border);border-radius:6px">${opts}</select>
+      <button style="margin-left:6px" id="btn-stage-go">重置该阶段</button>
+    </div>
+    <div class="item" id="rs-all" style="border-color:#f3c4c4;background:var(--fail-bg)">
+      <div class="t" style="color:#9f1d1d">⚠ 清空全部学习记录</div>
+      <div class="m">会先自动备份到 progress/progress.backup.json</div>
+    </div>`);
+  const hard = () => { const c = $('chk-hard'); return c ? c.checked : false; };
+
+  const after = async (n) => {
+    await loadQuestions();
+    if (CURRENT) selectQuestion(CURRENT.id);
+    toast(`已重置 ${n} 题 ↺`);
+  };
+  if (cur) $('rs-one').onclick = async ()=>{
+    if (!confirm(`重做「${cur.id} ${cur.title}」？`)) return;
+    await post('/api/reset-progress', {scope:'question', qid:cur.id, hard:hard()});
+    await after(1);
+  };
+  $('btn-stage-go').onclick = async ()=>{
+    const st = parseInt($('sel-stage').value, 10);
+    if (!confirm(`重置阶段 ${st}（${STAGES[st]}）的全部题目？`)) return;
+    const r = await post('/api/reset-progress', {scope:'stage', stage:st, hard:hard()});
+    await after(r.reset);
+  };
+  $('rs-all').onclick = async ()=>{
+    if (!confirm('清空全部学习记录？\n\n会自动备份到 progress/progress.backup.json。')) return;
+    const r = await post('/api/reset-progress', {scope:'all', hard:hard()});
+    await after(r.reset);
+    toast('已清空全部进度（已备份）');
+  };
+}
+
+/* ---------------- 杂项 ---------------- */
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
+  ['result','plan','diff','teach'].forEach(n=>{ $('pane-'+n).style.display = (n===name?'block':'none'); });
+}
+let toastTimer=null;
+function toast(msg){
+  const el = $('toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+document.querySelectorAll('.tab').forEach(t=> t.onclick = ()=>switchTab(t.dataset.tab));
+$('btn-run').onclick = runSQL;
+$('btn-submit').onclick = submitAnswer;
+$('btn-think').onclick = showNextStep;
+$('btn-answer').onclick = showAnswer;
+$('btn-review').onclick = panelReview;
+$('btn-wrong').onclick = panelWrong;
+$('btn-diag').onclick = panelDiagnose;
+$('btn-notes').onclick = panelNotes;
+$('btn-reset').onclick = panelReset;
+$('btn-redo').onclick = redoCurrent;
+$('btn-reset-db').onclick = async ()=>{
+  if (!confirm('把练习用的数据库恢复到初始状态？\n\n（只还原数据，学习记录不受影响）')) return;
+  await post('/api/reset', {session:SESSION});
+  loadSchema(); toast('练习库已还原');
+};
+document.addEventListener('keydown', e=>{
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){
+    e.preventDefault(); e.shiftKey ? submitAnswer() : runSQL();
+  }
+  if (e.key === 'Enter' && e.altKey){ e.preventDefault(); explain(); }
+  if (e.key === 'Escape'){ closeDrawer(); }
+});
+
+loadQuestions().then(()=>{
+  const first = QUESTIONS.find(q=>!q.passed && q.kind !== 'review') || QUESTIONS[0];
+  if (first) selectQuestion(first.id);
+});
+loadSchema();
+</script>
+</body>
+</html>

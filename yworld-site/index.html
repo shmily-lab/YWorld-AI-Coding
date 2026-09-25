@@ -8,7 +8,7 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #04070a; }
   body { font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif; color: #cfe8df; }
-  #scene { position: fixed; inset: 0; display: block; cursor: default; }
+  #scene { position: fixed; inset: 0; display: block; cursor: default; z-index: 1; }
 
   /* ---------- HUD ---------- */
   .hud { position: fixed; z-index: 10; pointer-events: none; user-select: none; }
@@ -93,6 +93,41 @@
   #speedTicks i.major { top: 16px; height: 6px; background: rgba(133, 240, 201, 0.7); }
   #speedTicks b { top: 23px; font-size: 8px; font-weight: 500; color: #57a08d;
                   transform: translateX(-50%); letter-spacing: 0; }
+
+  /* 移动端整体自适应：顶部品牌/统计、调速 HUD、底部按钮全部收敛（桌面端样式不变） */
+  @media (max-width: 768px) {
+    /* 顶部：品牌缩小、统计条收紧，避免与 logo 重叠 */
+    #brand { top: 20px; left: 20px; }
+    #brand .logo { font-size: 22px; }
+    #brand .slogan { font-size: 10px; letter-spacing: 3px; margin-top: 4px; }
+    #stats { top: 22px; right: 16px; gap: 8px; }
+    #stats .chip { font-size: 11px; padding: 5px 10px; gap: 5px; }
+    /* 底部提示行：上移到控件区上方，居中可换行，字号/亮度提高保证可读 */
+    #hint { display: flex; flex-wrap: wrap; justify-content: center;
+            bottom: 96px; left: 50%; transform: translateX(-50%);
+            max-width: calc(100vw - 28px); font-size: 11px; letter-spacing: 2px;
+            line-height: 1.6; row-gap: 3px; text-align: center;
+            color: rgba(170, 225, 205, 0.72); text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8); }
+    /* 航线回放按钮 & 音效按钮 */
+    #flightBtn { right: 14px; bottom: 16px; font-size: 11px; letter-spacing: 1px; padding: 8px 14px; }
+    #soundBtn { right: 14px; bottom: 68px; width: 38px; height: 38px; }
+    /* 时间线进度条 & toast */
+    #tl { width: min(560px, 86vw); bottom: 58px; }
+    #toast { bottom: 120px; font-size: 12px; padding: 8px 16px; max-width: calc(100vw - 32px); }
+    /* 调速 HUD：收窄 + 贴边 */
+    #speedHud { width: 168px; left: 14px; bottom: 16px; padding: 7px 11px 6px; border-radius: 9px; }
+    #speedHudCap { font-size: 9px; letter-spacing: 1px; margin-bottom: 3px; }
+    #speedHudVal { font-size: 13px; }
+    #speedHudHint { font-size: 8px; }
+    #speedTrackWrap { height: 28px; }
+    #speedThumb { width: 14px; height: 14px; margin-left: -7px; top: 7px; }
+    #speedTicks b { display: none; }   /* 窄屏隐藏刻度数字，节省高度 */
+  }
+  @media (max-width: 380px) {
+    #speedHud { width: calc(100vw - 56px); left: 12px; bottom: 14px; }
+    #brand .slogan { display: none; }
+    #stats .chip { padding: 4px 8px; }
+  }
 
   /* ---------- 自定义光标（当前关闭：恢复系统默认光标，代码保留可随时开启） ---------- */
   #cursorWrap, .curRipple { display: none !important; }
@@ -563,6 +598,11 @@ const speedFill = document.getElementById('speedFill');
 const speedThumb = document.getElementById('speedThumb');
 const speedTrackWrap = document.getElementById('speedTrackWrap');
 const speedTicks = document.getElementById('speedTicks');
+/* 移动端提示文案：触屏没有"悬停"，换成"点按"措辞 */
+if (window.matchMedia && matchMedia('(max-width: 768px)').matches) {
+  const segs = document.querySelectorAll('#hint span:not(.dotSep)');
+  if (segs[0]) segs[0].textContent = '点按花朵查看项目详情';
+}
 function refreshSpeedHud() {
   const v = state.speedMul;
   speedHudVal.textContent = v === 0 ? '已停转' : '×' + v.toFixed(1);
@@ -700,23 +740,34 @@ function pick() {
   if (!state.mouse.inside) { state.hoverRegion = -1; state.hoverNode = -1; return; }
   const [bx, by] = screenToBase(state.mouse.x, state.mouse.y);
 
-  /* 1) 粘滞：已悬停的节点移出 30px 才释放 */
-  const cur = state.hoverNode;
-  if (cur >= 0) {
-    const cz = projBuf[cur*4+2];
-    if (cz >= 0.15) {
-      const cd = Math.hypot(projBuf[cur*4] - bx, projBuf[cur*4+1] - by);
-      if (cd < 30) { state.hoverRegion = -1; return; }
-    }
+  /* 阅读（访客）模式下：光点不识别。
+     缝隙间的光点仅供站长"锚点建项目"使用，访客只浏览花朵分区；
+     因此访客模式下直接清空光点悬停态并跳过后续所有光点判定，
+     鼠标移到光点上完全无反应（不弹锁气泡 / 不变 crosshair / 不高亮白核）。
+     花朵分区的悬停高亮与标签在两种模式下都保留。 */
+  if (!state.ownerMode) {
     state.hoverNode = -1;
+  } else {
+    /* 1) 粘滞：已悬停的节点移出 30px 才释放（仅站长模式参与） */
+    const cur = state.hoverNode;
+    if (cur >= 0) {
+      const cz = projBuf[cur*4+2];
+      if (cz >= 0.15) {
+        const cd = Math.hypot(projBuf[cur*4] - bx, projBuf[cur*4+1] - by);
+        if (cd < 30) { state.hoverRegion = -1; return; }
+      }
+      state.hoverNode = -1;
+    }
   }
 
-  /* 2) 光点候选（进入半径 15px） */
+  /* 2) 光点候选（进入半径 15px）—— 仅站长模式可识别缝隙锚点 */
   let bestN = -1, bestNd = 15;
-  for (let i = 0; i < NODE_N; i++) {
-    const z = projBuf[i*4+2]; if (z < 0.15) continue;
-    const d = Math.hypot(projBuf[i*4] - bx, projBuf[i*4+1] - by);
-    if (d < bestNd) { bestNd = d; bestN = i; }
+  if (state.ownerMode) {
+    for (let i = 0; i < NODE_N; i++) {
+      const z = projBuf[i*4+2]; if (z < 0.15) continue;
+      const d = Math.hypot(projBuf[i*4] - bx, projBuf[i*4+1] - by);
+      if (d < bestNd) { bestNd = d; bestN = i; }
+    }
   }
 
   /* 3) 花朵候选：真实花瓣半径（小下限 12px 保证远端小花仍可命中）

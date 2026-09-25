@@ -16,3 +16,4 @@ yarn-error.log*
 Thumbs.db
 *.tmp
 *.log
+may_dump.txt
