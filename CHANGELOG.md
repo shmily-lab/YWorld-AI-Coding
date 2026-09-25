@@ -184,3 +184,16 @@ node .workbuddy/smoke-test.js D:/y'world/yworld-site-public/index.html   # 只�
   - `README.md`：在线预览地址改为 **https://shmily-lab.github.io/yworld/**，并修正 GitHub 源码仓库链接（去掉仓库名多余的 `-` 前缀）；
   - 本文件 v2.10 条目中已失效的 CloudStudio 链接标注"已失效，改用 v2.13 固定地址"。
 - **效果**：固定地址 https://shmily-lab.github.io/yworld/ 上线（HTTP 200，页面为还原版：深色背景、无银河）。CloudStudio 旧链接（0b21c030… / d66dab5a…）全部弃用。此后重新发布地址不再变化。
+
+---
+
+## v2.14 · 进站握手动画：像素女孩场景
+**提出 09-26 02:59**
+
+- **想要的效果**：进入星球前，画面里有一位戴眼镜的像素女孩坐在电脑前敲键盘，桌上有电脑/桌子/椅子/键盘；电脑屏幕实时显示一行行指令（三次握手日志），连接建立成功的瞬间屏幕由红转绿，女孩举手欢呼并发出欢呼音效。
+- **已实现**
+  - 握手覆盖层新增 `#hsGirl` 像素画布（380×240，image-rendering: pixelated）：女孩（戴青色眼镜、马尾后发）、椅子、桌子、键盘、显示器；女孩持续敲键盘（手随节奏上下），屏幕逐行打印 `> SYN / SYN-ACK / ACK / CONNECTED`；
+  - 屏幕底色在连接中保持**红**（rgb(60,12,12)），`ESTABLISHED` 时平滑过渡到**绿**（rgb(13,58,28)），边框同步变色；
+  - 成功瞬间女孩双手举起 + 轻微弹跳 + 头顶冒出 ♪/★，并播放新增的 `sfx.cheer()`（快速上行琶音 + 亮闪尾音）；
+  - 移动端加 `@media` 收敛画布与标题/日志尺寸。
+- **同步**：已双端提交推送（GitHub `shmily-lab/YWorld-AI-Coding` + Gitee `jysxh_code/YWorld-AI-Coding`），并更新 GitHub Pages 线上站点到本版。
