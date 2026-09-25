@@ -3,9 +3,9 @@
 > 一颗会自转的「拓扑星球」，每一个项目是星球上一朵发光的花。
 > 纯前端、零依赖的单页作品集 —— 由人与 AI 结对编程（AI Coding）逐轮迭代而成。
 
-**在线预览（HTTPS · 只读版）**：https://0b21c030bdc345838a1f13e52f32a5e0.app.workbuddy.host
+**在线预览（HTTPS · 只读版 · 固定地址）**：https://shmily-lab.github.io/yworld/
 
-**源码仓库**：[Gitee · jysxh_code/YWorld-AI-Coding](https://gitee.com/jysxh_code/YWorld-AI-Coding) ｜ [GitHub · shmily-lab/YWorld-AI-Coding](https://github.com/shmily-lab/-YWorld-AI-Coding)
+**源码仓库**：[Gitee · jysxh_code/YWorld-AI-Coding](https://gitee.com/jysxh_code/YWorld-AI-Coding) ｜ [GitHub · shmily-lab/YWorld-AI-Coding](https://github.com/shmily-lab/YWorld-AI-Coding)
 
 ---
 

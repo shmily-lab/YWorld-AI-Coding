@@ -139,7 +139,7 @@
   - 「换电脑可编辑」的缺口：界面创建的项目原本只存在浏览器 localStorage，换机就丢 → 站长面板新增 **💾 导出 / 📥 导入项目数据**（JSON，含经纬度与花瓣样式，按「标题+纬度」去重）
   - `build-readonly.js`：由可编辑版生成只读镜像，五步转换（隐藏全部站长 UI / 移除站长会话恢复 / 关闭创建气泡 / 改底部文案 / 烘焙项目数据），每步替换都做唯一性断言 + 收尾安全自检
   - 冒烟测试支持 `node smoke-test.js <path>`，对两个版本各跑一遍
-- **效果**：只读版 HTTPS 上线 https://0b21c030bdc345838a1f13e52f32a5e0.app.workbuddy.host ；旧的带编辑入口链接已下线。
+- **效果**：只读版 HTTPS 上线 https://0b21c030bdc345838a1f13e52f32a5e0.app.workbuddy.host ；旧的带编辑入口链接已下线。（⚠️ 该 CloudStudio 链接后来已被平台回收失效，现用 v2.13 的 GitHub Pages 固定地址。）
 
 ---
 
@@ -172,3 +172,15 @@ node .workbuddy/smoke-test.js D:/y'world/yworld-site-public/index.html   # 只�
 ```
 
 八个阶段：常规渲染 120 帧 → 航线回放全程 → 回放后复位 → 滚轮调速 → 滚动静默/恢复 → 锚点创建项目 → 滑杆拖动吸附 → 访客/站长门禁。
+
+---
+
+## v2.13 · 线上地址迁移到 GitHub Pages（固定域名）
+**提出 09-26 02:40**
+
+- **你想达成的效果**：CloudStudio 的临时链接被平台回收后 404，需要一个永不失效、链接里含 "yworld" 的正式对外地址。
+- **我改了什么**
+  - 用 GitHub PAT 在 `shmily-lab` 下新建公开仓库 `yworld`，推送发布版 `yworld-site-public/` 并开启 GitHub Pages（`main` 分支根目录），加 `.nojekyll` 纯静态托管；
+  - `README.md`：在线预览地址改为 **https://shmily-lab.github.io/yworld/**，并修正 GitHub 源码仓库链接（去掉仓库名多余的 `-` 前缀）；
+  - 本文件 v2.10 条目中已失效的 CloudStudio 链接标注"已失效，改用 v2.13 固定地址"。
+- **效果**：固定地址 https://shmily-lab.github.io/yworld/ 上线（HTTP 200，页面为还原版：深色背景、无银河）。CloudStudio 旧链接（0b21c030… / d66dab5a…）全部弃用。此后重新发布地址不再变化。
