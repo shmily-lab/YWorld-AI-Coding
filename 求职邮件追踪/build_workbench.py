@@ -12,7 +12,7 @@ OUT_DIR = r"D:\y'world\求职邮件追踪"
 sys.path.insert(0, OUT_DIR)
 import build_campus_sites as bcs  # 复用其 DATA / APPENDIX
 
-TODAY = datetime.date(2026, 9, 25)
+TODAY = datetime.date(2026, 9, 26)
 
 # ---------- 1. 待办（来自邮件追踪） ----------
 # type, 公司, 事项, 截止(datetime str), 链接, 备注
@@ -35,6 +35,9 @@ TODOS = [
   "https://h3c.ceping.com/pc?aId=rw5/jb8piton86E1gpw8Ig==", "通行证 12261871752329"),
  ("简历", "新华三技术", "完善简历信息（测试工程师岗位）", "2026-10-03 23:59",
   "https://bsurl.cn/v2/qbUni4rQ", "测评与简历两件事分开，别只做一件"),
+ ("投递", "途虎养车", "改一版简历适配「测试开发工程师」（2027届校招）并投递", "2026-09-30 23:59",
+  "https://www.tuhu.cn/",
+  "截止 09-30 24:00；推荐以「运维版」简历为底改（JD匹配度约60–65%），主打 AI 赋能测试：AI测试体系/平台搭建、用AI工具辅助测试、了解大模型基本能力；别拖到截止当天再投"),
 ]
 
 # 无明确截止的待处理事项
@@ -42,7 +45,7 @@ PENDING = [
  ("简历", "恒生招聘", "邀请更新简历（原截止 09-23 24:00 已过，建议主动补登）", ""),
  ("简历", "卓望校招组", "简历信息完善（两个链接）", "https://bsurl.cn/v2/DuJNT4f9　／　https://bsurl.cn/v2/9uXCXhCm"),
  ("问卷", "正浩 EcoFlow", "实习意向收集问卷（SRE 岗要求提前到岗实习）", ""),
- ("问卷", "途游游戏", "游戏经历补充问卷", "https://app.mokahr.com/su/vrhwod"),
+ ("问卷", "途游游戏", "游戏经历补充问卷（⚠️ 链接已失效：09-26 核验返回「链接无效或已过期」；且途游已判未通过，此项可弃）", ""),
  ("系统", "宇视科技", "招聘系统账号：用户名 PC_568655", "https://talent.uniview.com/wt/uniview/web/index?brandCode=uniview"),
  ("群", "恒生电子", "校招交流 QQ 群 1047909224（验证答案 600570）", ""),
 ]
@@ -93,7 +96,7 @@ NEW = [
  ("荣耀 HONOR","互联网/科技","mid","https://www.honor.com/cn/career/","2026-09-30","8大类岗位含「流程IT与质量运营类」，本硕简历投递9月30日24:00截止"),
  ("浪潮集团","互联网/科技","mid","http://career.inspur.com/campus2027/index.html","","技术类含测试、实施、数据中心专业工程师"),
  ("京东物流","互联网/科技","mid","https://campus.jd.com","2026-11-30","「新锐之星」独立项目，入口在京东校招官网 + 京东物流招聘公众号"),
- ("微博（新浪&微博）","互联网/科技","low","https://hr.sina.com.cn/campus/","","2027届技术专场分批开启，岗位偏研发算法，未见专门运维安全岗"),
+ ("微博（新浪&微博）","互联网/科技","mid","https://app.mokahr.com/social-recruitment/sina/43535?locale=zh-CN#/","","2027届技术专场含系统开发/测试开发工程师（测试开发对口你的测试方向），未见专门运维/安全岗；官网 career.sina.com.cn"),
  ("OPPO","互联网/科技","low","https://careers.oppo.com/university/oppo/campus","","11大类以软硬研发为主，未见独立运维/安全类，招满即止"),
  ("大疆 DJI","互联网/科技","low","https://careers.dji.com/zh-CN/campus","","「拓疆者」6月25日开启，不设截止、招满即止，限投1个职位"),
  ("微软中国","互联网/科技","low","https://careers.microsoft.com/","2026-10-08","APRD 网申至10月8日23:59，仅 Software Engineer 等研发岗"),
@@ -103,7 +106,7 @@ NEW = [
  ("安恒信息","网络安全","high","https://ahzp.dbappsecurity.com.cn/","","校招进行中，含安全分析、Agent 智能安全运营，杭州滨江总部，滚动筛选"),
  ("亚信安全","网络安全","high","https://asiainfo-sec.jobs.feishu.cn/campus","2026-10-30","AI类/研发/测试/安全研究员，覆盖9城，全岗免笔试，每人限投1岗"),
  ("启明星辰","网络安全","high","https://venustech2.zhiye.com/campus/jobs","2027-06-30","开发/测试/产品类，北京成都杭州，北京户口指标倾斜"),
- ("长亭科技","网络安全","high","https://campus2027.chaitin.cn/","","AI研发/AI攻防/安全研究/FDE/解决方案，8月起滚动开放，简历可投 resume@chaitin.com"),
+ ("长亭科技","网络安全","high","https://join.chaitin.cn/","","AI研发/AI攻防/安全研究/FDE/解决方案，8月起滚动开放，简历可投 resume@chaitin.com"),
  ("三六零 360","网络安全","high","https://360campus.zhiye.com/campus/jobs","","2027全球校招已开，安全研究/算法/开发/大数据，10月10日首批笔试"),
  ("天融信","网络安全","mid","https://www.topsec.com.cn/hr/campus.html","","官方校招页 + 「天融信招聘」公众号，2027届是否开放需进页面确认"),
  ("山石网科","网络安全","mid","https://hillstonenet.zhiye.com/campus/jobs","","8月24日启动，售前/售后工程师，流程网申→笔试→测评→面试"),
@@ -125,7 +128,7 @@ NEW = [
  ("中国民生银行","金融/运营商/电网","mid","https://career.cmbc.com.cn/","2026-10-25","「扬帆/启航」计划科技方向，总行信息科技部招开发、运维、数据安全"),
  ("宁波银行","金融/运营商/电网","mid","https://zhaopin.nbcb.com.cn","2026-10-31","总行科技部明确招计算机、网络工程、信息安全专业，城商行科技投入高"),
  ("杭州银行","金融/运营商/电网","mid","https://myjob.hzbank.com.cn","2026-10-25","信息科技岗（开发、运维、数据安全、网络）"),
- ("中广核","金融/运营商/电网","mid","https://cgn.hotjob.cn","2026-10-30","含信息安全、仪控/数字化（DCS、工业网络）类岗位"),
+ ("中广核","金融/运营商/电网","mid","https://www.cgnpc.com.cn/","2026-10-30","含信息安全、仪控/数字化（DCS、工业网络）类岗位"),
  ("中国电科 CETC","金融/运营商/电网","mid","https://www.cetc.com.cn","","各研究所自主发布（如29所截止2027-05-11），大量招网络空间安全、通信类"),
  ("国家电网","金融/运营商/电网","low","https://zhaopin.sgcc.com.cn","","第一批公告预计11月中旬；信通提前批见 campus.51job.com/SGIT2027/（10月底截止）"),
  ("南方电网","金融/运营商/电网","low","https://zhaopin.csg.cn","","正式批网申预计11月初；南网数字集团提前批招信息通信类约170人"),
@@ -151,7 +154,7 @@ NEW = [
  ("赛力斯","制造/半导体/汽车","low","https://sokon.zhiye.com/campus","","6大类岗位，研发类含软件&系统开发，未见独立IT运维类"),
  ("广汽集团","制造/半导体/汽车","low","https://xyzp.51job.com/gacgroup2027","","9大岗位方向未单列IT类，但有智联系统验证、测试等计算机向岗位"),
  ("地平线","制造/半导体/汽车","low","https://horizon-campus.hotjob.cn/","2026-10-30","招聘方向为算法/芯片/软件/硬件/测试，无独立IT运维或信息安全岗"),
- ("紫光展锐","制造/半导体/汽车","low","https://campus.unisoc.com/recruit","","11类岗位以芯片/软件/算法为主，软件类可能含IT岗"),
+ ("紫光展锐","制造/半导体/汽车","low","https://www.unisoc.com/","","11类岗位以芯片/软件/算法为主，软件类可能含IT岗"),
 ]
 
 UNCONFIRMED = [
@@ -201,16 +204,16 @@ REF = [
   "投递后仍可在初筛前撤回重投补码；技术类含开发/测试/运维方向"),
  ("小红书","2HPF4F8GV90G / 47FIQM0JF0YP / 7ZYM4JHM4PN8","互联网/科技","https://job.xiaohongshu.com/campus","mid","校招官网内推码栏"),
  ("得物","JABXADV / VJCQFZW / N9MNWZW / A7KBHYB / 8H2Z2ZZ","互联网/科技","https://www.dewu.com/campus","mid","选岗后找「大使推荐」栏填入"),
- ("微博","NTA1Uv4 / NTAcc9p","互联网/科技","https://campus.sina.com.cn/","low",
-  "第 4 位是数字 1 不是小写 l，建议整条复制；技术专场偏系统研发/风控，无专门网络工程岗"),
+ ("微博","NTA1Uv4 / NTAcc9p","互联网/科技","https://app.mokahr.com/social-recruitment/sina/43535?locale=zh-CN#/","low",
+  "第 4 位是数字 1 不是小写 l，建议整条复制；2027届技术专场含系统开发/测试开发工程师（测试开发对口你的测试方向）。官网 career.sina.com.cn，网申与内推码在 mokahr 页填写"),
  ("知乎","NTAm131","互联网/科技","https://app.mokahr.com/recommendation-apply/zhihu/3820","low",
   "仅见于聚合平台，官方只在高校宣讲说「找学长学姐内推」，未公布公开码，请先小范围验证"),
  ("携程","NTArwr3 / NTAfGS2 / NTAgLiM / NTA6LY0","互联网/科技","https://campus.ctrip.com/","mid","你已在走 SRE 测评流程，补码可优先筛选"),
  ("唯品会","NTAArwH / NTAAsUz","互联网/科技","https://campus.vip.com/","mid","校招官网推荐码栏"),
- ("金山办公 WPS","DSmB8bjW / NTA79r2","互联网/科技","https://www.wps.cn/hr/","mid","推荐码栏填入"),
+ ("金山办公 WPS","DSmB8bjW / NTA79r2","互联网/科技","https://www.wps.cn/","mid","推荐码栏填入"),
  ("顺丰","5CC6RA","互联网/科技","https://campus.sf-express.com/","mid","顺丰科技/顺丰航空通用"),
- ("货拉拉","NTAf566","互联网/科技","https://job.huolala.cn/campus","mid","推荐码栏"),
- ("途虎养车","DSy4HXDP","互联网/科技","https://zhaopin.tuhu.cn/","mid","推荐码栏"),
+ ("货拉拉","NTAf566","互联网/科技","https://join.huolala.cn/","mid","推荐码栏"),
+ ("途虎养车","DSy4HXDP","互联网/科技","https://www.tuhu.cn/","mid","推荐码栏"),
  ("科大讯飞","EV3RHG / EV3RHJ / IZKMGG / EVBRH0 / ESVCHR","互联网/科技","https://iflytek.zhiye.com/campus/jobs","mid",
   "EV3RHG 源自高校就业网。注意 27 届主要开放的是转正实习岗"),
  ("好未来 / 学而思","DSyKFqbx / DSc7myTe","互联网/科技",
@@ -222,25 +225,25 @@ REF = [
  ("智元机器人","XP9JUTE","互联网/科技","https://agirobot.jobs.feishu.cn/s/WIVzPj3j3IE","mid","投递时选「大使推荐」通道再填码"),
  ("浪潮集团","jX7PlGU / 6Bbui47","互联网/科技","https://inspur.hcmcloud.cn/recruit#/campus_category?type=campus","mid",
   "jX7PlGU 首字母小写 j、含数字 7、GU 前是小写 l；6Bbui47 含数字 6 与 47"),
- ("基恩士 KEYENCE","ESVW23 / EVVWB0 / ESVWAG / ES3JR1 / ESVJGG","制造/消费电子","https://www.keyence.com.cn/recruit/","mid",
+ ("基恩士 KEYENCE","ESVW23 / EVVWB0 / ESVWAG / ES3JR1 / ESVJGG","制造/消费电子","https://www.keyence.com.cn/careers","mid",
   "专业不限全员可投，27 届专属（2026.9–2027.8 毕业）"),
- ("传音控股","EVH89B","制造/消费电子","https://campus.transsion.com/","mid","深沪渝有岗，支持海外派驻"),
+ ("传音控股","EVH89B","制造/消费电子","https://transsion.zhiye.com/campus","mid","深沪渝有岗，支持海外派驻"),
  ("宇通集团","jeycea","制造/消费电子","https://wecruit.hotjob.cn/SU64e7157a1eb80519a8e4efcf/mc/index","mid","先进入管培生通道再填码"),
- ("摩尔线程","IZK6BT","互联网/科技","https://www.moorethread.com/campus","low","GPU 厂商，内推帖来源单一"),
+ ("摩尔线程","IZK6BT","互联网/科技","https://mthreads.zhiye.com/campus","low","GPU 厂商；2027校招含「网络通信与存储」「软件测试/AI测试」，城市含武汉/成都（对口你的网络+测试方向）；官网域名已由 moorethread.com 换为 mthreads.com，旧域名已废弃"),
  # —— 游戏 ——
  ("米哈游","TTTGC / EIXGN / NH5L4 / R92SD / LQFT / 27V7L / 8UEZ","游戏","https://jobs.mihoyo.com/#/campus/position","mid",
   "TTTGC / EIXGN 出自 2027 秋招正式批帖，时效性最好；8UEZ 为老码。应届生仅可投 1 个职位"),
  ("库洛游戏","KTBS4XE / CJ5CGEX / 3CX558C","游戏","https://kurogame.jobs.feishu.cn/campus/","mid","投递时找「大使推荐」栏填码"),
  ("沐瞳科技","HYPRHKD","游戏","https://moonton.jobs.feishu.cn/s/1e3gTUbAygc","mid","推荐方式选「大使推荐」再填码"),
  ("途游游戏","DSQCTCbp / DSry5Z24 / DSncXAVx / DSU41vNb","游戏","https://www.tuyoo.com/campus","mid","推荐码栏"),
- ("巨人网络","DSpXF2Z9 / NTAeCyy","游戏","https://campus.ga-me.com/","mid","推荐码栏"),
+ ("巨人网络","DSpXF2Z9 / NTAeCyy","游戏","https://hr.ztgame.com/campus/join/recruit/","mid","推荐码栏"),
  ("三七互娱","DSvAtnc9 / DSeDdRAf / DStcT227","游戏","https://campus.37.com/","mid","推荐码栏"),
  ("莉莉丝","5YDEWZ2 / UWMZ21P","游戏","https://www.lilithgames.com/campus","mid","推荐码栏"),
- ("鹰角网络","NTA9xtN / NTAevja","游戏","https://www.hypergryph.com/campus","mid","推荐码栏"),
- ("叠纸游戏","A6KRC9P / XVW83QT","游戏","https://campus.papegames.com/","mid","推荐码栏"),
+ ("鹰角网络","NTA9xtN / NTAevja","游戏","https://www.hypergryph.com/","mid","推荐码栏"),
+ ("叠纸游戏","A6KRC9P / XVW83QT","游戏","https://www.papegames.com/","mid","推荐码栏"),
  ("网易互娱","TIFh5R / shqAig / XVZ8LnR","游戏","https://game.campus.163.com/","mid","互娱与雷火分开，雷火码 qw4cwo2pomshirr5"),
- ("灵犀互娱","2T4SPDMS / 2T47SF5K","游戏","https://campus.lingxi.163.com/","mid","推荐码栏"),
- ("深蓝互动","DSrtS5Pm / DSRPdAJN","游戏","https://www.darkblue.game/","low","聚合帖来源，待验证"),
+ ("灵犀互娱","2T4SPDMS / 2T47SF5K","游戏","https://campus.163.com/","mid","推荐码栏"),
+ ("深蓝互动","DSrtS5Pm / DSRPdAJN","游戏","https://www.bluepoch.com/","low","聚合帖来源，待验证"),
  # —— 网络安全 / 通信 ——
  ("深信服","NTAWwLF / NTAJG1D / DSJykfXW","网络安全/通信",
   "https://app.mokahr.com/campus_apply/sangfor/27944?recommendCode=DSJykfXW#/jobs","high",
@@ -249,12 +252,12 @@ REF = [
   "★ 27 届全部岗位免笔试，每人限投 1 个职位。注意是「亚信安全」不是「亚信科技」"),
  ("中兴通讯","NTAXptH / NTAsLJe / NTAgCyp / DSFCrN6z / NTAXcME","网络安全/通信",
   "https://app.mokahr.com/m/campus-recruitment/zte/46903#/home","mid",
-  "⚠ 已通过未来领军/实习/中兴捧月投过的，秋招直接官网投，再填内推码会投递失败。四码大小写敏感"),
+  "⚠ 已通过未来领军/实习/中兴捧月投过的，秋招直接官网投，再填内推码会投递失败。四码大小写敏感。武大就业网 9 月简章另给官方内推短链 app.mokahr.com/su/vmqVn"),
  ("华为","（无需内推码）","网络安全/通信","https://career.huawei.com","high",
   "career.huawei.com 是唯一投递入口，官方明确不存在统一校招内推码，任何付费内推都是诈骗。想走员工推荐可把官网生成的简历编号发给对接员工"),
- ("荣耀 HONOR","fvqibr / rgltca / yhshcb / ofsski","制造/消费电子",
+ ("荣耀 HONOR","fvqibr / rgltca / yhshcb / ofsski / aajvef","制造/消费电子",
   "https://career.honor.com/SU60ee9e002f9d247b98da489e/mc/position/campus?acotycoCode=ofsski","mid",
-  "27 届 14 类 70+ 岗位，网申时填推荐码，四码任选其一"),
+  "27 届 14 类 70+ 岗位，网申时填推荐码。⚠ 本硕简历截止 2026-09-30 24:00，aajvef 出自牛客 27 届官方启动帖，五码任选其一"),
  ("OPPO","X3448036 / Z71213103 / X6538748 / 80417111","制造/消费电子","https://careers.oppo.com/university/oppo/campus/post","high",
   "X3448036 出自华中农业大学就业网官方简章，最稳妥；每人最多 2 个志愿"),
  ("大疆 DJI","DSGz7tGD / DSvFhRaB / DSKeRdhz","互联网/科技",
@@ -281,33 +284,33 @@ REF = [
   "★ 岗位列表明确含「信息安全专员」；也可走「BOE 校园招聘内部推荐」小程序让学长学姐生成专属码"),
  ("紫光展锐","12785","制造/半导体/汽车","https://www.unisoc.com/campus","low",
   "填的是员工工号不是字母码，官方未公开字母内推码，有效性需自行核验"),
- ("中芯国际","BJ06 / BJ01","制造/半导体/汽车","https://www.smics.com/campus","low","聚合帖口径，待验证"),
+ ("中芯国际","BJ06 / BJ01","制造/半导体/汽车","https://www.smics.com/","low","聚合帖口径，待验证"),
  ("汇川技术","ABBPREB / AKKFRT8 / RE8SMYZ","制造/半导体/汽车","https://inovance.zhiye.com/campus","mid","推荐码栏"),
- ("欣旺达","EVVS3B / EVBXT3 / ESKZ3H","制造/半导体/汽车","https://www.sunwoda.com/campus","mid","动力电池方向另见 EVKSSJ"),
+ ("欣旺达","EVVS3B / EVBXT3 / ESKZ3H","制造/半导体/汽车","https://www.sunwoda.com/","mid","动力电池方向另见 EVKSSJ"),
  ("正浩创新 EcoFlow","GNU4GHP","制造/消费电子","https://jobs.ecoflow.com/602892","mid","★ 你已投两次 SRE 岗，网申 9 月底关，投之前先补码"),
- ("阳光电源","NTAuMBe / NTAwHpR / NTAuBxF","制造/半导体/汽车","https://careers.sungrowpower.com/campus","mid","推荐码栏"),
- ("远景能源","DSYMXZk1 / NTAMT0m / DSC64ted / DSK3HYpH","制造/半导体/汽车","https://campus.envision-group.com/","mid","推荐码栏"),
- ("金风科技","ISKP8G / IVVP80","制造/半导体/汽车","https://campus.goldwind.com/","mid","推荐码栏"),
- ("三一集团","ESKMBS / ESKM1A / EVKM80 / EVKM9J","制造/半导体/汽车","https://campus.sany.com.cn/","mid","推荐码栏"),
- ("豪迈集团","EVHPGS","制造/半导体/汽车","https://www.himile.com/campus","mid","推荐码栏"),
+ ("阳光电源","NTAuMBe / NTAwHpR / NTAuBxF","制造/半导体/汽车","https://jobs.sungrowpower.com/","mid","推荐码栏"),
+ ("远景能源","DSYMXZk1 / NTAMT0m / DSC64ted / DSK3HYpH","制造/半导体/汽车","https://envision-career.com","mid","推荐码栏"),
+ ("金风科技","ISKP8G / IVVP80","制造/半导体/汽车","https://www.goldwind.com/","mid","推荐码栏"),
+ ("三一集团","ESKMBS / ESKM1A / EVKM80 / EVKM9J","制造/半导体/汽车","https://sany.zhiye.com/campus","mid","推荐码栏"),
+ ("豪迈集团","EVHPGS","制造/半导体/汽车","https://www.himile.com/","mid","推荐码栏"),
  ("华勤技术","NTArpLU / NTAjpG8","制造/消费电子","https://campus.huaqin.com/","mid","推荐码栏"),
- ("九号公司","NTAvBkk","制造/消费电子","https://campus.ninebot.com/","mid","推荐码栏"),
- ("奥克斯","ESVM8G","制造/消费电子","https://campus.auxgroup.com/","mid","推荐码栏"),
- ("春风动力","ESVYR1","制造/消费电子","https://campus.cfmoto.com/","mid","推荐码栏"),
+ ("九号公司","NTAvBkk","制造/消费电子","https://www.ninebot.com/","mid","推荐码栏"),
+ ("奥克斯","ESVM8G","制造/消费电子","https://www.auxgroup.com/","mid","推荐码栏"),
+ ("春风动力","ESVYR1","制造/消费电子","https://www.cfmoto.com/","mid","推荐码栏"),
  # —— 消费电子 / 家电 ——
  ("海尔","GHJ493 / GHJ491 / GHJ498 / GHJ462 / GHJ551","制造/消费电子",
   "https://maker.haier.net/client/campusmobile/customizedjobs/type/top.html","mid",
   "填法特殊：招聘信息来源选「未来规划局推荐」再填码。GHJ493 与 GHJ491 仅末位不同"),
- ("海信","ES1PTH / EV1PVR","制造/消费电子","https://campus.hisense.com/","mid","推荐码栏"),
+ ("海信","ES1PTH / EV1PVR","制造/消费电子","https://jobs.hisense.com/","mid","推荐码栏"),
  ("TCL实业","ytgwuf / awfvzp","制造/消费电子",
   "https://actyco.wintalent.cn/actyco/home/receiver/poster/redirect?id=2ce781f69fb84c0101a0330197af22af","mid",
   "★ 职能类含「IT 与数字化类」；ytgwuf 末位是 f 不是 t"),
  ("TCL华星光电","tyfqth / vkjzoi / kjrbup","制造/消费电子",
   "https://actyco.wintalent.cn/actyco/home/receiver/poster/redirect?id=2ce781f69fb84c0101a0330197af22af","mid",
   "与 TCL 实业同一系统，两子公司合计限投 2 岗；tyfqth / vkjzoi 为校园大使码"),
- ("美的集团","M4I451 / MZ6426 / M1582V / MJ2655 / M4Y642","制造/消费电子",
+ ("美的集团","M4I451 / MZ6426 / M1582V / MJ2655 / M4Y642 / M772H4","制造/消费电子",
   "https://careers.midea.com/recruit-school-wechat/job?mvp_code=M4I451&type=1","high",
-  "M4I451 出自多所高校就业网公告。★ 八大职类含「信息技术类」；填法为「应聘信息获取渠道」选「伯乐推荐」再填码，已投递可在个人中心补填"),
+  "M4I451 出自多所高校就业网公告；M772H4 出自华中师范大学就业网 27 届简章（校园大使码）。★ 八大职类含「信息技术类」；填法为「应聘信息获取渠道」选「伯乐推荐」再填码，已投递可在个人中心补填"),
  ("格力电器","CGREE77820 / BGREE36819 / CGREE15965 / BGREE99853","制造/消费电子","https://zhaopin.greeyun.com/home","high",
   "CGREE77820 出现在华中师大/重庆大学等多校就业网公告，可信度最高。★ 信息技术类明确含「信息安全」岗"),
  ("立讯精密","thnicf","制造/消费电子","https://luxshare.hotjob.cn","low",
@@ -337,18 +340,19 @@ NOREF = [
  ("中国光大银行","金融/银行","无内推机制；金融科技岗、安全管理岗（北京），网申约 09-28~11-09","http://cebbank.51job.com/"),
  ("中国移动","网络安全/通信","无内推码机制，官方警示凡收费「内推」均为诈骗；10-24 集团统一笔试，最多 2 个志愿","https://job.10086.cn"),
  ("中国联通","网络安全/通信","无内推码机制，官网/智联/国聘三平台选其一投递，重复投递影响筛选；笔试 11 月上旬","https://zglt.zhaopin.com"),
- ("中国铁塔","网络安全/通信","官网是唯一报名入口，无内推码，警惕「保录取」收费","https://zhaopin.chinatowercom.cn/"),
+ ("中国铁塔","网络安全/通信","官网 zhaopin.chinatowercom.cn 是唯一报名入口，无内推码，警惕「保录取」收费；9/26 查证 27 届正式批公告尚未发布，往年 10 月中旬网申","https://zhaopin.chinatowercom.cn/"),
+ ("中邮消费金融","金融/银行","未检索到公开内推码；走飞书网申或公众号【中邮消费金融招聘】投递。IT技术类含信息安全岗（广州），高校就业网帖子有效期至 10-07","https://is35svcbne.jobs.feishu.cn/youcash/"),
  ("中国银联","金融/银行","官网注册后「立即申请该职位」，未见 27 届公开内推码","https://join.unionpay.com/"),
  ("国家电网","金融/运营商/电网","无内推机制；电子信息类含计算机与网络与信息安全，国网信通提前批约 10 月底截止","https://zhaopin.sgcc.com.cn/"),
  ("南方电网","金融/运营商/电网","无内推机制；提前批有信息通信业务岗（数字电网开发、网络安全）","https://zhaopin.csg.cn/"),
- ("中广核","金融/运营商/电网","无内推机制；计算机类/电子信息类（数字科技方向），09-04 起开放","https://cgn.hotjob.cn/"),
+ ("中广核","金融/运营商/电网","无内推机制；计算机类/电子信息类（数字科技方向），09-04 起开放","https://www.cgnpc.com.cn/"),
  ("中国电子科技集团 CETC","国企/央企","无内推机制；电科网安、三十所等有网络安全类岗位，校招入口见公告二维码","https://www.cetc.com.cn/"),
  ("奇安信","网络安全/通信","官方明确需联系员工或校园大使获取内推码，无全网通用公开码；网申截止 11-14，每人 2 个志愿","https://campus.qianxin.com/"),
- ("安恒信息","网络安全/通信","无公开码，搜到的 AH8837 为 2022 年前后旧帖；27 届含安全服务、渗透测试岗，官网或公众号投递","https://www.dbappsecurity.com.cn/careers"),
+ ("安恒信息","网络安全/通信","无公开码，搜到的 AH8837 为 2022 年前后旧帖；27 届含安全服务、渗透测试岗，官网或公众号投递","https://www.dbappsecurity.com.cn/"),
  ("启明星辰","网络安全/通信","无公开码，官网未设推荐码入口；27 届岗 9 月中旬上线，网申与内推并行至 2027-06-30","https://venustech2.zhiye.com/campus/jobs"),
  ("天融信","网络安全/通信","无公开码，旧码 ESVMKA / EVKMT9 为 22 届；投递走官网或「天融信招聘」公众号","https://www.topsec.com.cn/hr/campus.html"),
- ("山石网科","网络安全/通信","官方只说向在职员工要码，旧码 ISVMAK / IVKM9G 为 24-25 届不适用","http://hillstonenet.m.zhiye.com"),
- ("长亭科技","网络安全/通信","无公开码，旧码 NTAWkpg 为 25 届；官网 join.chaitin.cn 或简历直投 resume@chaitin.com","https://app.mokahr.com/campus-recruitment/chaitin/92701"),
+ ("山石网科","网络安全/通信","官方只说向在职员工要码，旧码 ISVMAK / IVKM9G 为 24-25 届不适用","https://hillstonenet.zhiye.com/campus"),
+ ("长亭科技","网络安全/通信","无公开码，旧码 NTAWkpg 为 25 届；招聘官网 join.chaitin.cn（原 mokahr 链接已关停）或简历直投 resume@chaitin.com","https://join.chaitin.cn/"),
  ("三六零 360","网络安全/通信","系统有推荐码栏但需向员工索取；牛客可见 IS3YH9 / EVBAGS 等均为 26 届及更早旧码。第一批笔试 10-10","https://360campus.zhiye.com/campus/jobs"),
  ("美亚柏科","网络安全/通信","仅有「内部推荐」（上传简历、无码）通道；投递走 www.300188.cn 或公众号","https://hr.300188.cn/"),
  ("赛力斯","制造/半导体/汽车","官方仅写「找学长学姐获取内推链接」，未放出可核验的公开码；职能类含 IT 岗","https://auto.seres.cn/recruitIndex"),
@@ -434,6 +438,8 @@ ALIAS = [
     ("中国电信", "中国电信"), ("千问（阿里巴巴）", "阿里巴巴"),
     ("智元机器人（AGIBOT）", "智元机器人"), ("网易（互娱）", "网易"),
     ("湖北亿纬动力（亿纬锂能）", "亿纬锂能"), ("亿纬锂能（社招）", "亿纬锂能"),
+    # 台账里带英文缩写后缀，会被 NOT_SAME("腾讯","腾讯音乐") 的子串规则误杀，显式配对
+    ("腾讯音乐 TME", "腾讯音乐"), ("腾讯音乐TME", "腾讯音乐"),
 ]
 
 
@@ -441,7 +447,8 @@ ALIAS = [
 SHORT_OK = ["小米", "海尔", "美的", "格力", "华为", "中兴", "联想", "大疆", "蔚来", "吉利",
             "百度", "美团", "腾讯", "网易", "字节", "京东", "顺丰", "海信", "长虹", "比亚迪",
             "宁德", "三一", "浪潮", "金蝶", "长城", "长安", "广汽", "上汽", "东风", "奇瑞",
-            "海康", "大华", "oppo", "vivo", "携程", "滴滴", "快手", "微博", "知乎", "拼多多"]
+            "海康", "大华", "oppo", "vivo", "携程", "滴滴", "快手", "微博", "知乎", "拼多多",
+            "荣耀", "哔哩哔哩"]
 
 
 def _norm(s):
@@ -651,10 +658,10 @@ html = r"""<!DOCTYPE html>
     <h1>姜艺 · 秋招工作台</h1>
     <div class="sub">
       整合：<b>邮件追踪待办</b>（测评/笔试/面试/投递）· <b>已投递公司校招官网</b>（台账 __N_MINE__ 家）· <b>可补投大厂通道</b>（__N_NEW__ 家）· <b>内推码</b>（__N_REF__ 家，另有 __N_NOREF__ 家确认无需内推码）<br>
-      校招官网与内推码均于 2026-09-25 联网核实　|　数据源：QQ邮箱 + WPS云盘《工作计划完成统计表1.xlsx》「五月」sheet + 高校就业网/牛客　|　最后更新：<b>2026-09-25</b>
+      校招官网与内推码均于 2026-09-26 联网核实　|　数据源：QQ邮箱 + WPS云盘《工作计划完成统计表1.xlsx》「五月」sheet + 高校就业网/牛客　|　最后更新：<b>2026-09-26</b>
     </div>
     <div class="stats">
-      <div class="stat"><b style="color:#e54545">__N_TODO__</b><span>进行中待办</span></div>
+      <div class="stat"><b style="color:#e54545" id="stat-todo">__N_TODO__</b><span>进行中待办</span></div>
       <div class="stat"><b>__N_MINE__</b><span>已投递公司</span></div>
       <div class="stat"><b style="color:#1a8a4a" id="stat-new">__N_NEW__</b><span>可补投通道</span></div>
       <div class="stat"><b style="color:#d97706">__N_REF__</b><span>内推码</span></div>
@@ -664,7 +671,7 @@ html = r"""<!DOCTYPE html>
   </header>
 
   <nav>
-    <span class="tab on" data-t="todo">🔥 待办<i>__N_TODO__</i></span>
+    <span class="tab on" data-t="todo">🔥 待办<i id="tab-todo-n">__N_TODO__</i></span>
     <span class="tab" data-t="mine">📮 我的投递<i>__N_MINE__</i></span>
     <span class="tab" data-t="new">🚀 可补投通道<i id="tab-new-n">__N_NEW__</i></span>
     <span class="tab" data-t="ref">🎟 内推码<i>__N_REF__</i></span>
@@ -685,6 +692,12 @@ html = r"""<!DOCTYPE html>
     <div class="grid" id="g-todo"></div>
     <h2 class="sec g">另有 __N_PEND__ 项无明确截止，尽快处理</h2>
     <div class="grid" id="g-pend"></div>
+    <div id="done-bar" class="hide" style="margin-top:13px;font-size:12.5px;color:#4e5969;background:#fff;border:1px solid #e5e6eb;border-radius:10px;padding:11px 15px">
+      你已处理 <b id="done-n">0</b> 项，已从上方划掉。
+      <a href="javascript:void(0)" id="done-show" style="color:#3b6ef5;text-decoration:none;margin-left:8px">显示已处理</a>
+      <a href="javascript:void(0)" id="done-undo" style="color:#3b6ef5;text-decoration:none;margin-left:8px">恢复全部</a>
+      <div style="margin-top:6px;color:#a9aeb8">标记存在本机浏览器，换设备不同步；每天脚本重生成后仍在（除非清缓存）。</div>
+    </div>
   </div>
 
   <div id="pane-mine" class="hide">
@@ -809,21 +822,35 @@ function fmt(ms){
 }
 
 function todoCard(d){
+  const k = tkey(d);
+  const done = DONE.has(k);
   const c = cdText(d.iso);
-  const btns = d.url
-    ? '<div class="btns"><a class="btn" href="'+d.url+'" data-ext="'+d.url+'" data-title="'+esc(d.comp)+'">立即处理 ↗</a></div>'
-    : '<div class="btns"><a class="btn na">无直链</a></div>';
+  const main = d.url
+    ? '<a class="btn" href="'+d.url+'" data-ext="'+d.url+'" data-title="'+esc(d.comp)+'">立即处理 ↗</a>'
+    : '<a class="btn na">无直链</a>';
+  const act = done
+    ? '<a class="btn g" href="javascript:void(0)" data-undone="'+esc(k)+'" title="点一下恢复为待办">↩ 恢复</a>'
+    : '<a class="btn g" href="javascript:void(0)" data-done="'+esc(k)+'" title="处理完点一下，从待办里划掉">✓ 已处理</a>';
+  const btns = '<div class="btns">'+main+act+'</div>';
   const ex = (d.extra||[]).length
     ? '<div class="exlinks">'+d.extra.map(e=>'<a href="'+e.url+'" data-ext="'+e.url+'" data-title="'+esc(e.label)+'">'+esc(e.label)+'</a>').join('')+'</div>'
     : '';
-  return '<div class="card '+c.cls+'"><h3>'+esc(d.comp)+'<span class="tag type">'+esc(d.type)+'</span></h3>'
+  return '<div class="card '+c.cls+'"><h3>'+esc(d.comp)+'<span class="tag type">'+esc(d.type)+'</span>'
+    + (done?'<span class="mine">已处理</span>':'') + '</h3>'
     + '<div class="role">'+esc(d.item)+'</div>'
     + '<div><span class="cd '+c.cls+'">'+c.txt+'</span> <span class="meta">截止 '+esc(d.dl)+'</span></div>'
     + '<div class="note">'+esc(d.note)+'</div>' + btns + ex + '</div>';
 }
 function pendCard(d){
-  const b = d.url ? '<div class="btns"><a class="btn g" href="'+d.url+'" data-ext="'+d.url+'" data-title="'+esc(d.comp)+'">打开 ↗</a></div>' : '';
-  return '<div class="card"><h3>'+esc(d.comp)+'<span class="tag type">'+esc(d.type)+'</span></h3>'
+  const k = pkey(d);
+  const done = DONE.has(k);
+  const main = d.url ? '<a class="btn g" href="'+d.url+'" data-ext="'+d.url+'" data-title="'+esc(d.comp)+'">打开 ↗</a>' : '';
+  const act = done
+    ? '<a class="btn g" href="javascript:void(0)" data-undone="'+esc(k)+'" title="点一下恢复为待办">↩ 恢复</a>'
+    : '<a class="btn g" href="javascript:void(0)" data-done="'+esc(k)+'" title="处理完点一下，从待办里划掉">✓ 已处理</a>';
+  const b = '<div class="btns">'+main+act+'</div>';
+  return '<div class="card"><h3>'+esc(d.comp)+'<span class="tag type">'+esc(d.type)+'</span>'
+    + (done?'<span class="mine">已处理</span>':'') + '</h3>'
     + '<div class="role">'+esc(d.item)+'</div>' + b + '</div>';
 }
 function mineCard(d){
@@ -850,13 +877,23 @@ function refCard(d){
   const bar = d.codes.length
     ? '<div class="codebar">' + d.codes.map(c=>'<span class="code" title="点击复制">'+esc(c)+'</span>').join('') + '</div>'
     : '<div class="codebar"><span class="code na">'+esc(d.raw)+'</span></div>';
+  // 已投 = 台账算的 d.mine ∪ 浏览器实时标记（与 renderRef 的 liveMine 一致）
+  const isMine = d.mine || appliedTo(d.name);
+  // 浏览器侧可撤销的标记；磁盘底图（手动已投标记.txt）与台账的不可在浏览器撤销
+  let bm = null;
+  for(const m of APPLIED){ if(isSame(d.name, m) && !BASE_APPLIED.includes(m)){ bm = m; break; } }
+  const toggle = isMine
+    ? (bm
+        ? '<a class="btn g" href="javascript:void(0)" data-unmark="'+esc(bm)+'" title="点一下撤销「已投」标记">✓ 已投（点击撤销）</a>'
+        : '<a class="btn g" href="javascript:void(0)" data-nomark="1" title="来自 Excel 台账，需改台账才生效">已投过（台账）</a>')
+    : '<a class="btn g" href="javascript:void(0)" data-mark="'+esc(d.name)+'" title="投完点一下，可补投通道里的这家会同步隐藏">✓ 标为已投</a>';
   return '<div class="card"><h3>'+esc(d.name)
     + '<span class="src '+d.src+'" title="'+esc(SRCTXT[d.src])+'">'+esc(SRCTXT[d.src])+'</span>'
-    + '<span class="mine '+(d.mine?'y':'')+'">'+(d.mine?'已投过':'未投')+'</span></h3>'
+    + '<span class="mine '+(isMine?'y':'')+'">'+(isMine?'已投过':'未投')+'</span></h3>'
     + '<div class="meta"><span>'+esc(d.cat)+'</span></div>'
     + bar
     + '<div class="note">'+esc(d.note)+'</div>'
-    + '<div class="btns"><a class="btn g" href="'+d.url+'" data-ext="'+d.url+'" data-title="'+esc(d.name)+'">去校招官网 ↗</a></div></div>';
+    + '<div class="btns"><a class="btn g" href="'+d.url+'" data-ext="'+d.url+'" data-title="'+esc(d.name)+'">去校招官网 ↗</a>' + toggle + '</div></div>';
 }
 
 const S = {todo:'', mine:'', new:'', dead:'', ref:''};
@@ -865,10 +902,24 @@ const F = {todo:'all', mine:'all', new:'all', dead:'all', ref:'all'};
 function renderTodo(){
   const l = TODOS.filter(d=>{
     const okT = F.todo==='all' ? true : (F.todo==='hot' ? (new Date(d.iso)-Date.now())<7*864e5 : d.type===F.todo);
-    return okT && (!S.todo || (d.comp+d.item+d.note).toLowerCase().includes(S.todo));
+    const ok = okT && (!S.todo || (d.comp+d.item+d.note).toLowerCase().includes(S.todo));
+    return ok && (SHOW_DONE || !DONE.has(tkey(d)));
   });
   document.getElementById('g-todo').innerHTML = l.map(todoCard).join('') || '<div class="empty">没有匹配的待办</div>';
-  document.getElementById('g-pend').innerHTML = PEND.map(pendCard).join('');
+  const pl = PEND.filter(d=> SHOW_DONE || !DONE.has(pkey(d)));
+  document.getElementById('g-pend').innerHTML = pl.map(pendCard).join('');
+  // 已处理提示条 + 待办计数（只算未处理的）
+  const bar = document.getElementById('done-bar');
+  if (bar){
+    bar.classList.toggle('hide', DONE.size===0);
+    document.getElementById('done-n').textContent = String(DONE.size);
+    const showL = document.getElementById('done-show');
+    if (showL) showL.textContent = SHOW_DONE ? '隐藏已处理' : '显示已处理';
+  }
+  const left = TODOS.filter(d=>!DONE.has(tkey(d))).length;
+  const sn = document.getElementById('stat-todo'), tn = document.getElementById('tab-todo-n');
+  if (sn) sn.textContent = String(left);
+  if (tn) tn.textContent = String(left);
 }
 function renderMine(){
   const l = MINE.filter(d=>{
@@ -884,9 +935,18 @@ const LSKEY = 'qy_applied_v1';
 let APPLIED = new Set([...BASE_APPLIED]);
 try { JSON.parse(localStorage.getItem(LSKEY) || '[]').forEach(x=>APPLIED.add(x)); } catch(e) {}
 function saveApplied(){ try { localStorage.setItem(LSKEY, JSON.stringify([...APPLIED])); } catch(e) {} }
+
+// 待办「已处理」标记（本机浏览器）—— 键用"类型|公司|事项"拼，改动事项文字会重置标记
+const DKEY = 'qy_done_v1';
+let DONE = new Set();
+try { JSON.parse(localStorage.getItem(DKEY) || '[]').forEach(x=>DONE.add(x)); } catch(e) {}
+function saveDone(){ try { localStorage.setItem(DKEY, JSON.stringify([...DONE])); } catch(e) {} }
+const tkey = d => ['T', d.type||'', d.comp||'', d.item||''].join('|');
+const pkey = d => ['P', d.type||'', d.comp||'', d.item||''].join('|');
+let SHOW_DONE = false;
 // —— 公司名同指判断（复刻 Python is_same），用于「✓已投」实时联动内推码 tab ——
 const _NOTSAME = [["京东","京东方"],["京东","京东物流"],["腾讯","腾讯音乐"],["腾讯","腾讯健康"],["阿里","阿里健康"],["中国通号","通号"],["中国电信","中国移动"],["中国电信","中国联通"],["招商银行","招银网络科技"],["中国工商银行","中国建设银行"],["中国工商银行","中国农业银行"],["中国工商银行","交通银行"],["中国工商银行","中国邮政储蓄银行"],["中国工商银行","中信银行"],["中国工商银行","浦发银行"],["中国工商银行","兴业银行"],["中国工商银行","中国民生银行"],["东风汽车","长安汽车"],["东风汽车","上汽集团"],["东风汽车","广汽集团"],["东风汽车","吉利控股"],["东风汽车","小鹏汽车"],["东风汽车","理想汽车"],["东风汽车","蔚来"],["东风汽车","比亚迪"],["通号工程局集团","通号工程电气化局"],["通号工程局集团","通号低空"],["通号工程电气化局","通号低空"],["通号低空","北京现代通号工程咨询"]];
-const _ALIAS = [["中国移动湖北公司","中国移动"],["湖北移动","中国移动"],["中国电信","中国电信"],["千问（阿里巴巴）","阿里巴巴"],["智元机器人（AGIBOT）","智元机器人"],["网易（互娱）","网易"],["湖北亿纬动力（亿纬锂能）","亿纬锂能"],["亿纬锂能（社招）","亿纬锂能"]];
+const _ALIAS = [["中国移动湖北公司","中国移动"],["湖北移动","中国移动"],["中国电信","中国电信"],["千问（阿里巴巴）","阿里巴巴"],["智元机器人（AGIBOT）","智元机器人"],["网易（互娱）","网易"],["湖北亿纬动力（亿纬锂能）","亿纬锂能"],["亿纬锂能（社招）","亿纬锂能"],["腾讯音乐 TME","腾讯音乐"],["腾讯音乐TME","腾讯音乐"]];
 const _SHORT = ["小米","海尔","美的","格力","华为","中兴","联想","大疆","蔚来","吉利","百度","美团","腾讯","网易","字节","京东","顺丰","海信","长虹","比亚迪","宁德","三一","浪潮","金蝶","长城","长安","广汽","上汽","东风","奇瑞","海康","大华","oppo","vivo","携程","滴滴","快手","微博","知乎","拼多多"];
 function _norm(s){ s=String(s||''); for(const ch of " （）()·-/&"){ s=s.split(ch).join(''); } return s.toLowerCase(); }
 function isSame(a,b){
@@ -906,7 +966,7 @@ function appliedTo(name){ for(const m of APPLIED){ if(isSame(name, m)) return tr
 function renderNew(){
   const l = NEWC.filter(d=>{
     const ok = F.new==='all' ? true : (F.new==='high'||F.new==='low' ? d.fit===F.new : d.cat===F.new);
-    return ok && !APPLIED.has(d.name) && (!S.new || (d.name+d.note+d.cat).toLowerCase().includes(S.new));
+    return ok && !appliedTo(d.name) && (!S.new || (d.name+d.note+d.cat).toLowerCase().includes(S.new));
   });
   document.getElementById('g-new').innerHTML = l.map(newCard).join('') || '<div class="empty">没有匹配的通道</div>';
   document.getElementById('g-uncf').innerHTML = UNCF.map(u=>'<tr><td><b>'+esc(u.name)+'</b></td><td class="c">'+esc(u.cat)+'</td><td class="c">'+esc(u.note)+'</td></tr>').join('');
@@ -916,7 +976,7 @@ function renderNew(){
   const pend = [...APPLIED].filter(x=>!BASE_APPLIED.includes(x));
   const pEl = document.getElementById('applied-pending');
   if (pEl){ pEl.classList.toggle('hide', pend.length===0); document.getElementById('applied-pending-n').textContent = String(pend.length); }
-  const left = String(NEWC.length - APPLIED.size);
+  const left = String(NEWC.length - NEWC.filter(d=>appliedTo(d.name)).length);
   const sn = document.getElementById('stat-new'), tn = document.getElementById('tab-new-n');
   if (sn) sn.textContent = left;
   if (tn) tn.textContent = left;
@@ -933,7 +993,41 @@ document.addEventListener('click', e=>{
   if (!a) return;
   e.preventDefault();
   APPLIED.add(a.dataset.mark); saveApplied(); renderNew(); renderRef();
-  say('已标记「'+a.dataset.mark+'」为已投，内推码同步更新');
+  say('已标记「'+a.dataset.mark+'」为已投，可补投与内推码同步更新');
+});
+document.addEventListener('click', e=>{
+  const a = e.target.closest('[data-unmark]');
+  if (!a) return;
+  e.preventDefault();
+  APPLIED.delete(a.dataset.unmark); saveApplied(); renderNew(); renderRef();
+  say('已撤销「'+a.dataset.unmark+'」的已投标记');
+});
+document.addEventListener('click', e=>{
+  const a = e.target.closest('[data-nomark]');
+  if (!a) return;
+  e.preventDefault();
+  say('这家来自 Excel 台账，请在台账里改；浏览器只能标记台账里没有的公司');
+});
+document.addEventListener('click', e=>{
+  const a = e.target.closest('[data-done]');
+  if (!a) return;
+  e.preventDefault();
+  DONE.add(a.dataset.done); saveDone(); renderTodo();
+  say('已标记处理完成，从待办划掉');
+});
+document.addEventListener('click', e=>{
+  const a = e.target.closest('[data-undone]');
+  if (!a) return;
+  e.preventDefault();
+  DONE.delete(a.dataset.undone); saveDone(); renderTodo();
+  say('已恢复为待办');
+});
+document.getElementById('done-undo').addEventListener('click', ()=>{
+  DONE.clear(); saveDone(); renderTodo(); say('已恢复全部已处理项');
+});
+document.getElementById('done-show').addEventListener('click', ()=>{
+  SHOW_DONE = !SHOW_DONE; renderTodo();
+  say(SHOW_DONE ? '已显示已处理项' : '已隐藏已处理项');
 });
 document.getElementById('applied-undo').addEventListener('click', ()=>{
   APPLIED = new Set(BASE_APPLIED); saveApplied(); renderNew(); renderRef(); say('已撤销本次浏览器内手动标记（磁盘名单保留）');
@@ -1089,7 +1183,7 @@ html = (html
 SRCNAME = {"high": "高校就业网/官方简章", "mid": "牛客员工帖", "low": "聚合帖·待验证"}
 L = []
 L.append("# 2027 届秋招内推码清单\n")
-L.append("> 姜艺（长江大学 · 网络工程）｜ 联网核实于 **2026-09-25** ｜ 共 **{}** 家有公开内推码，另有 **{}** 家确认无需/无内推机制\n".format(len(refs), len(noref)))
+L.append("> 姜艺（长江大学 · 网络工程）｜ 联网核实于 **2026-09-26** ｜ 共 **{}** 家有公开内推码，另有 **{}** 家确认无需/无内推机制\n".format(len(refs), len(noref)))
 L.append("## 使用前必读\n")
 L.append("1. **内推码有有效期和次数限制**，看到就尽快投，别收藏吃灰。一个填不上就换下一个。")
 L.append("2. **0 与 O、1 与 l、5 与 S 肉眼极易看错**，贴进网申表前对照原表核一遍。填错了内推等于白拿。")
