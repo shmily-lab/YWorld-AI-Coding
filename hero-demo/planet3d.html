@@ -144,13 +144,13 @@ const W_SCALE = 0.92;  /* 环宽微收，换取间隙，肉眼几乎无感 */
 /* k  = 一个 8 秒周期内翻转的半圈数（整数！保证每 8 秒所有环同时翻回同一平面）
    ax = 翻转轴在盘面内的方位角，各环不同 → 中间过程姿态各异，看得出是七层独立的环 */
 const RINGS = [
-  { w:0.50, th:0.10, color:0xA9D4EE, k: 7, ax:-0.90, sp: 0.42 },
-  { w:0.56, th:0.11, color:0x8FC3E8, k: 6, ax:-0.60, sp:-0.36 },
-  { w:0.62, th:0.12, color:0x6FAEDC, k: 5, ax:-0.30, sp: 0.30 },
-  { w:0.68, th:0.13, color:0x4E93CE, k: 4, ax: 0.00, sp:-0.24 },
-  { w:0.74, th:0.14, color:0x3A7BB8, k: 3, ax: 0.30, sp: 0.19 },
-  { w:0.80, th:0.15, color:0x2A64A0, k: 2, ax: 0.60, sp:-0.14 },
-  { w:0.86, th:0.16, color:0x1B4C80, k: 1, ax: 0.90, sp: 0.10 },
+  { w:0.50, th:0.30, color:0xA9D4EE, k: 7, ax:-0.90, sp: 0.42 },
+  { w:0.56, th:0.32, color:0x8FC3E8, k: 6, ax:-0.60, sp:-0.36 },
+  { w:0.62, th:0.34, color:0x6FAEDC, k: 5, ax:-0.30, sp: 0.30 },
+  { w:0.68, th:0.36, color:0x4E93CE, k: 4, ax: 0.00, sp:-0.24 },
+  { w:0.74, th:0.38, color:0x3A7BB8, k: 3, ax: 0.30, sp: 0.19 },
+  { w:0.80, th:0.40, color:0x2A64A0, k: 2, ax: 0.60, sp:-0.14 },
+  { w:0.86, th:0.42, color:0x1B4C80, k: 1, ax: 0.90, sp: 0.10 },
 ];
 /* 自动排布半径：保证 out_i + GAP <= in_{i+1}，从此不可能相交 */
 (function layoutRadii(){
@@ -162,20 +162,15 @@ const RINGS = [
   });
 })();
 
-/* 倒角截面：让高光边缘连续，不再碎闪 */
+/* 圆润的椭圆截面（torus 感）：翻到任何角度都是有质感的厚边，
+   不会再出现薄片侧对镜头时的"窄窄一条" */
 function ringGeom(r, w, th, seg){
-  const c = Math.min(0.02, th*0.22, w*0.12);
-  return new THREE.LatheGeometry([
-    new THREE.Vector2(r - w/2,       -th/2 + c),
-    new THREE.Vector2(r - w/2,        th/2 - c),
-    new THREE.Vector2(r - w/2 + c,    th/2),
-    new THREE.Vector2(r + w/2 - c,    th/2),
-    new THREE.Vector2(r + w/2,        th/2 - c),
-    new THREE.Vector2(r + w/2,       -th/2 + c),
-    new THREE.Vector2(r + w/2 - c,   -th/2),
-    new THREE.Vector2(r - w/2 + c,   -th/2),
-    new THREE.Vector2(r - w/2,       -th/2 + c),
-  ], seg);
+  const N = 28, pts = [];
+  for (let i = 0; i <= N; i++){
+    const a = i / N * Math.PI * 2;
+    pts.push(new THREE.Vector2(r + (w/2) * Math.cos(a), (th/2) * Math.sin(a)));
+  }
+  return new THREE.LatheGeometry(pts, seg);
 }
 const SEG = 320;                    /* 大半径环也不出多边形棱 */
 const SPIN = 1.20;                  /* 自转速度系数（绕环自身轴，靠周向纹理才看得见；配角） */
