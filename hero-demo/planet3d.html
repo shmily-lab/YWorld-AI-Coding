@@ -176,6 +176,7 @@ function ringGeom(r, w, th, seg){
   ], seg);
 }
 const SEG = 320;                    /* 大半径环也不出多边形棱 */
+const SPIN = 0.75;                  /* 进动速度系数：原 0.5 的 1.5 倍 */
 const rings = RINGS.map(cfg => {
   const mesh = new THREE.Mesh(
     ringGeom(cfg.r, cfg.w, cfg.th, SEG),
@@ -216,6 +217,7 @@ window.__diag = () => ({
   dpr: DPR, samples: SAMPLES,
   rtSamples: composer.renderTarget1.samples,
   bands: RINGS.map(c => [ +(c.r - c.w/2).toFixed(3), +(c.r + c.w/2).toFixed(3) ]),
+  tilt: rings.map(m => [ +m.rotation.x.toFixed(3), +m.rotation.z.toFixed(3) ]),
   minGap: RINGS.slice(1).reduce((m, c, i) => Math.min(m, (c.r - c.w/2) - (RINGS[i].r + RINGS[i].w/2)), 99),
   errs: window.__errs,
   calls: renderer.info.render.calls, tris: renderer.info.render.triangles,
@@ -228,12 +230,15 @@ window.__fps = 0;
   requestAnimationFrame(animate);
   const t = clock.getElapsedTime();
   const born = Math.min(1, t/1.6), e = 1 - Math.pow(1-born, 3);
+  /* 倾角展开比缩放慢一拍：先看到一个完整的共面盘，再缓缓散成扇形 */
+  const tb = Math.min(1, t/3.2), te = 1 - Math.pow(1-tb, 3);
   rings.forEach(m => {
     const c = m.userData;
     m.scale.setScalar(Math.max(0.001, e));
-    m.rotation.x = c.tx;              /* 倾角固定，稳重 */
-    m.rotation.z = c.tz;
-    m.rotation.y = t * c.sp * 0.5;    /* 缓慢进动，速度各异 */
+    /* 入场时七环共面，随入场进度展开成扇形；e=0 时倾角全为 0 */
+    m.rotation.x = c.tx * te;
+    m.rotation.z = c.tz * te;
+    m.rotation.y = t * c.sp * SPIN;   /* 缓慢进动，速度各异 */
   });
   core.scale.setScalar(Math.max(0.001, e));
   coreLight.intensity = 14 + Math.sin(t*2)*1.2;
