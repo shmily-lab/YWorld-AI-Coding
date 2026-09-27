@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>y'world · Hero 概念 Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; background: #0B1218; }
+  body { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; color: #F2F7F5; }
+  #stage { position: fixed; inset: 0; display: block; }
+
+  .hero { position: fixed; left: 5.5vw; top: 50%; transform: translateY(-50%); z-index: 5;
+          transition: opacity .7s ease, transform .7s ease; }
+  body.entered .hero { opacity: 0; transform: translateY(-50%) translateX(-40px); pointer-events: none; }
+  .logo { font: 600 17px/1 Consolas, monospace; letter-spacing: 1px; }
+  .logo i { font-style: normal; color: #EF9F27; }
+  .hero h1 { font-size: clamp(34px, 4.6vw, 58px); font-weight: 600; letter-spacing: 2px; margin: 34px 0 10px; }
+  .hero .en { font: 400 13px/1 Consolas, monospace; color: #7FA398; letter-spacing: 2px; margin-bottom: 8px; }
+  .hero .desc { font-size: 13px; color: #5F7E74; margin-bottom: 30px; }
+  .btns { display: flex; gap: 12px; margin-bottom: 34px; }
+  .btn { cursor: pointer; border: none; border-radius: 24px; padding: 11px 22px;
+         font: 600 13px/1 "Segoe UI", "Microsoft YaHei", sans-serif; letter-spacing: 1px;
+         transition: transform .15s, box-shadow .15s; }
+  .btn:hover { transform: translateY(-2px); }
+  .btn.main { background: #1D9E75; color: #04241B; box-shadow: 0 0 18px rgba(29,158,117,.35); }
+  .btn.main:hover { box-shadow: 0 0 26px rgba(29,158,117,.6); }
+  .btn.ghost { background: transparent; color: #9FE1CB; border: 1px solid #3A5A52; }
+  .readout { font: 400 12px/2 Consolas, monospace; color: #5F7E74; letter-spacing: 1px; }
+  .readout b { color: #9FE1CB; font-weight: 400; }
+
+  .scrub { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 5;
+           display: flex; align-items: center; gap: 14px; transition: opacity .5s; }
+  body.entered .scrub { opacity: 0; pointer-events: none; }
+  .scrub label { font: 400 11px/1 Consolas, monospace; color: #4A6B60; letter-spacing: 2px; }
+  .scrub input { -webkit-appearance: none; width: min(46vw, 420px); height: 22px; background: transparent; cursor: pointer; }
+  .scrub input::-webkit-slider-runnable-track { height: 2px; background: #22323C; }
+  .scrub input::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
+        background: #1D9E75; margin-top: -5px; box-shadow: 0 0 10px rgba(29,158,117,.7); }
+
+  .tip { position: fixed; inset: 0; z-index: 8; display: none; align-items: center; justify-content: center;
+         flex-direction: column; gap: 18px; text-align: center; }
+  body.entered .tip { display: flex; }
+  .tip p { font: 400 14px/1.8 "Microsoft YaHei", sans-serif; color: #9FE1CB; }
+  .tip small { font: 400 12px/1 Consolas, monospace; color: #4A6B60; }
+
+  .hs { position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center;
+        background: rgba(5,9,15,.88); }
+  .hs.on { display: flex; }
+  .hsBox { width: min(560px, 88vw); border: 1px solid #22323C; border-radius: 14px; background: #0A1016; padding: 26px 30px; }
+  .hsBox h3 { font: 600 14px/1 "Segoe UI", sans-serif; color: #9FE8D2; letter-spacing: 3px; margin-bottom: 20px; }
+  .hsStage { position: relative; height: 86px; margin-bottom: 18px; }
+  .hsNode { position: absolute; top: 30px; width: 26px; height: 26px; border-radius: 50%; }
+  .hsNode.c { left: 6px; background: radial-gradient(circle at 35% 35%, #d9fff0, #1D9E75 70%); }
+  .hsNode.s { right: 6px; background: radial-gradient(circle at 35% 35%, #ffd9f0, #B052C8 70%); }
+  .hsLine { position: absolute; top: 42px; left: 32px; right: 32px; border-top: 1px dashed #2C4A40; }
+  .hsPkt { position: absolute; top: 36px; left: 32px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%;
+           background: #9AFFD9; box-shadow: 0 0 12px #9AFFD9; opacity: 0; transition: left .8s linear, opacity .2s; }
+  .hsTag { position: absolute; top: 8px; font: 700 12px Consolas, monospace; color: #03120C;
+           background: #9AFFD9; padding: 2px 8px; border-radius: 4px; opacity: 0; transition: opacity .25s; }
+  .hsLog { font: 400 12px/1.9 Consolas, "Microsoft YaHei", monospace; color: #8FE6C8; min-height: 96px; }
+  .hsLog .s { color: #E6A8F0; } .hsLog .ok { color: #7DFFB0; }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+
+<div class="hero">
+  <div class="logo">y'world<i>.</i></div>
+  <h1>我的项目星球</h1>
+  <div class="en">MY PROJECT PLANET</div>
+  <div class="desc">网络工程作品集 · 6 个项目分区 · 自转星球与时间线航线</div>
+  <div class="btns">
+    <button class="btn main" id="btnEnter">进入星球</button>
+    <button class="btn ghost" id="btnHs">⟲ 重播握手</button>
+  </div>
+  <div class="readout">
+    PROJECTS <b>06</b><br>
+    UPTIME <b id="uptime">00:00:00</b><br>
+    MODE <b>VISITOR</b>
+  </div>
+</div>
+
+<div class="scrub">
+  <label>SCRUB</label>
+  <input type="range" id="scrub" min="0" max="1000" value="0">
+</div>
+
+<div class="tip">
+  <p>已进入星球（Demo 演示边界）</p>
+  <small>此处将无缝衔接现有的花朵分区 / 时间线航线主页</small>
+  <button class="btn ghost" id="btnBack">← 返回 Hero</button>
+</div>
+
+<div class="hs" id="hsMini">
+  <div class="hsBox">
+    <h3>TCP · 三次握手</h3>
+    <div class="hsStage">
+      <div class="hsNode c"></div><div class="hsNode s"></div>
+      <div class="hsLine"></div>
+      <div class="hsPkt" id="hsPkt"></div>
+      <div class="hsTag" id="hsTag">SYN</div>
+    </div>
+    <div class="hsLog" id="hsLog"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- 舞台 ---------- */
+const cv = document.getElementById('stage'), cx = cv.getContext('2d');
+let W, H, DPR = Math.min(2, window.devicePixelRatio || 1);
+function resize() { W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR;
+  cv.style.width = W + 'px'; cv.style.height = H + 'px'; cx.setTransform(DPR, 0, 0, DPR, 0, 0); }
+addEventListener('resize', resize); resize();
+
+/* 星球点云：斐波那契球面均匀分布 */
+const N = 96, pts = [];
+const GA = Math.PI * (3 - Math.sqrt(5));
+for (let i = 0; i < N; i++) {
+  const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), th = GA * i;
+  pts.push([Math.cos(th) * r, y, Math.sin(th) * r]);
+}
+/* 近邻连线（3D 阈值，预计算） */
+const links = [];
+for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+  const dx = pts[i][0]-pts[j][0], dy = pts[i][1]-pts[j][1], dz = pts[i][2]-pts[j][2];
+  if (dx*dx + dy*dy + dz*dz < 0.36) links.push([i, j]);
+}
+/* 标注钉点（球面单位向量） */
+const pins = [ { v: [0.62, 0.45, 0.64], txt: '园区网建设 · 真机', dx: 185, dy: -120 },
+               { v: [-0.7, -0.2, 0.68], txt: '时间线航线回放', dx: -185, dy: 95 } ];
+
+let rotY = 0, scrubbing = false, zoom = 1, zoomT = 1;
+const ARC = ['#E24B4A', '#EF9F27', '#97C459', '#378ADD', '#5DCAA5'];
+const scrubEl = document.getElementById('scrub');
+scrubEl.addEventListener('input', () => { scrubbing = true; rotY = scrubEl.value / 1000 * Math.PI * 4; });
+scrubEl.addEventListener('change', () => { scrubbing = false; });
+
+function proj(p, cxp, cyp, R) {
+  const [x, y, z] = p;
+  const X = x * Math.cos(rotY) + z * Math.sin(rotY);
+  const Z = -x * Math.sin(rotY) + z * Math.cos(rotY);
+  const Y2 = y * Math.cos(0.35) - Z * Math.sin(0.35);
+  const Z2 = y * Math.sin(0.35) + Z * Math.cos(0.35);
+  return { x: cxp + X * R, y: cyp + Y2 * R, z: Z2 };
+}
+function frame(now) {
+  const t = now * 0.001;
+  if (!scrubbing) rotY += 0.0035;
+  zoom += (zoomT - zoom) * 0.06;
+  cx.clearRect(0, 0, W, H);
+  /* 星尘 */
+  cx.fillStyle = 'rgba(90,130,120,.5)';
+  for (let i = 0; i < 40; i++) {
+    const sx = (i * 197.3) % W, sy = (i * 131.7) % H;
+    const a = 0.15 + 0.3 * Math.abs(Math.sin(t * (0.4 + i % 5 * 0.2) + i));
+    cx.globalAlpha = a; cx.fillRect(sx, sy, 1.6, 1.6);
+  }
+  cx.globalAlpha = 1;
+  const cxp = W * (0.68 - 0.18 * (zoom - 1) / 0.9), cyp = H * 0.47;
+  const R = Math.min(W, H) * 0.21 * zoom;
+  /* 引线标注（画在星球下层） */
+  cx.font = '12px Consolas, "Microsoft YaHei", monospace';
+  for (const pin of pins) {
+    const q = proj(pin.v, cxp, cyp, R);
+    const front = q.z > 0.12;
+    cx.globalAlpha = front ? 0.92 : 0.22;
+    cx.strokeStyle = '#4A6B60'; cx.beginPath();
+    cx.moveTo(q.x, q.y); cx.lineTo(q.x + pin.dx * 0.62, q.y + pin.dy); cx.lineTo(q.x + pin.dx, q.y + pin.dy);
+    cx.stroke();
+    const tw = cx.measureText(pin.txt).width;
+    const tx = q.x + pin.dx + (pin.dx > 0 ? 8 : -tw - 14), ty = q.y + pin.dy - 10;
+    cx.fillStyle = 'rgba(10,16,22,.82)'; cx.fillRect(tx - 5, ty - 3, tw + 10, 20);
+    cx.strokeStyle = 'rgba(74,107,96,.6)'; cx.strokeRect(tx - 5, ty - 3, tw + 10, 20);
+    cx.fillStyle = front ? '#9FE1CB' : '#3A5248';
+    cx.fillText(pin.txt, tx, ty + 12);
+    cx.fillStyle = '#F0997B'; cx.beginPath(); cx.arc(q.x, q.y, 3.4, 0, 7); cx.fill();
+  }
+  cx.globalAlpha = 1;
+  /* 线框球：连线 + 点 */
+  const P = pts.map(p => proj(p, cxp, cyp, R));
+  for (const [a, b] of links) {
+    const zAvg = (P[a].z + P[b].z) / 2;
+    cx.strokeStyle = 'rgba(45,212,160,' + (0.05 + Math.max(0, zAvg) * 0.3).toFixed(3) + ')';
+    cx.beginPath(); cx.moveTo(P[a].x, P[a].y); cx.lineTo(P[b].x, P[b].y); cx.stroke();
+  }
+  for (const q of P) {
+    const s = 1.2 + Math.max(0, q.z) * 2.2;
+    cx.fillStyle = 'rgba(159,225,203,' + (0.25 + Math.max(0, q.z) * 0.75).toFixed(3) + ')';
+    cx.beginPath(); cx.arc(q.x, q.y, s, 0, 7); cx.fill();
+  }
+  /* 刻度环 */
+  const rT = R * 1.58;
+  cx.strokeStyle = 'rgba(44,58,68,.9)';
+  for (let i = 0; i < 72; i++) {
+    const a = i / 72 * Math.PI * 2, l = i % 6 === 0 ? 7 : 4;
+    cx.beginPath();
+    cx.moveTo(cxp + Math.cos(a) * rT, cyp + Math.sin(a) * rT);
+    cx.lineTo(cxp + Math.cos(a) * (rT + l), cyp + Math.sin(a) * (rT + l));
+    cx.stroke();
+  }
+  /* 彩色弧环（流动） */
+  const rA = R * 1.4, seg = Math.PI * 2 / 5;
+  for (let i = 0; i < 5; i++) {
+    const a0 = t * 0.22 + i * seg + 0.12;
+    cx.strokeStyle = ARC[i]; cx.lineWidth = 3; cx.lineCap = 'round';
+    cx.beginPath(); cx.arc(cxp, cyp, rA, a0, a0 + seg * 0.72); cx.stroke();
+  }
+  cx.lineWidth = 1;
+  /* 背景进度弧 */
+  cx.strokeStyle = 'rgba(120,140,150,.18)';
+  cx.beginPath(); cx.arc(cxp, cyp, R * 1.22, Math.PI * 0.15, Math.PI * 1.5); cx.stroke();
+  /* 顶部弧形指示 */
+  cx.strokeStyle = 'rgba(220,230,235,.35)';
+  cx.beginPath(); cx.arc(cxp, cyp, R * 1.12, Math.PI * 1.15 + Math.sin(t * 0.6) * 0.2, Math.PI * 1.55 + Math.sin(t * 0.6) * 0.2); cx.stroke();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* UPTIME */
+const upEl = document.getElementById('uptime'), t0 = Date.now();
+setInterval(() => {
+  const s = Math.floor((Date.now() - t0) / 1000);
+  const p = n => String(n).padStart(2, '0');
+  upEl.textContent = p(Math.floor(s / 3600)) + ':' + p(Math.floor(s / 60) % 60) + ':' + p(s % 60);
+}, 1000);
+
+/* 进入 / 返回 */
+document.getElementById('btnEnter').onclick = () => { zoomT = 1.9; document.body.classList.add('entered'); };
+document.getElementById('btnBack').onclick = () => { zoomT = 1; document.body.classList.remove('entered'); };
+
+/* 重播握手（轻量演示） */
+const hsMini = document.getElementById('hsMini'), pkt = document.getElementById('hsPkt'),
+      tag = document.getElementById('hsTag'), log = document.getElementById('hsLog');
+function hsLine(txt, cls) { const d = document.createElement('div'); if (cls) d.className = cls;
+  d.textContent = txt; log.appendChild(d); }
+function fly(dir, label, dur) {
+  return new Promise(res => {
+    pkt.style.transition = 'none'; pkt.style.opacity = '1';
+    pkt.style.left = dir > 0 ? '32px' : 'calc(100% - 38px)';
+    tag.textContent = label; tag.style.opacity = '1';
+    tag.style.left = dir > 0 ? '52px' : 'auto'; tag.style.right = dir > 0 ? 'auto' : '52px';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      pkt.style.transition = 'left ' + dur + 'ms linear';
+      pkt.style.left = dir > 0 ? 'calc(100% - 38px)' : '32px';
+    }));
+    setTimeout(() => { pkt.style.opacity = '0'; tag.style.opacity = '0'; res(); }, dur);
+  });
+}
+document.getElementById('btnHs').onclick = async () => {
+  hsMini.classList.add('on'); log.innerHTML = '';
+  hsLine("› 本机 请求与 y'world 星球建立连接");
+  await new Promise(r => setTimeout(r, 400));
+  await fly(1, 'SYN', 800); hsLine("[SYN]     本机 → y'world   seq=0x1A2B");
+  await new Promise(r => setTimeout(r, 350));
+  await fly(-1, 'SYN-ACK', 800); hsLine("[SYN-ACK] y'world → 本机   seq=0x7F3C ack=0x1A2C", 's');
+  await new Promise(r => setTimeout(r, 350));
+  await fly(1, 'ACK', 800); hsLine("[ACK]     本机 → y'world   ack=0x7F3D");
+  await new Promise(r => setTimeout(r, 300));
+  hsLine('✓ 连接已建立 · ESTABLISHED', 'ok');
+  await new Promise(r => setTimeout(r, 900));
+  hsMini.classList.remove('on');
+};
+</script>
+</body>
+</html>

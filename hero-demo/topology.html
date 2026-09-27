@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>y'world · 拓扑爆炸分解图 Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; color: #2C2C2A; background: #EAE7DF; }
+  #stage { position: fixed; inset: 0; display: block; }
+
+  .panel { position: fixed; z-index: 5; }
+  .head { left: 5vw; top: 6vh; }
+  .head .k { font: 600 13px/1 Consolas, monospace; color: #185FA5; letter-spacing: 3px; }
+  .head h1 { font-size: clamp(26px, 3.2vw, 40px); font-weight: 600; letter-spacing: 1px; margin: 12px 0 6px; }
+  .head .sub { font-size: 13px; color: #6E6C66; letter-spacing: 1px; }
+  .head .note { font: 400 12px/1.7 Consolas, "Microsoft YaHei", monospace; color: #98968E; margin-top: 16px; }
+
+  .ctrl { right: 4vw; bottom: 6vh; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+  .ctrl .row { display: flex; align-items: center; gap: 12px; }
+  .ctrl label { font: 400 11px/1 Consolas, monospace; color: #6E6C66; letter-spacing: 2px; }
+  .ctrl input { -webkit-appearance: none; width: 200px; height: 20px; background: transparent; cursor: pointer; }
+  .ctrl input::-webkit-slider-runnable-track { height: 2px; background: #C8C5BB; }
+  .ctrl input::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+        background: #2C2C2A; margin-top: -6px; border: 2px solid #EAE7DF; }
+  .ctrl .btn { cursor: pointer; border: 1px solid #2C2C2A; background: transparent; border-radius: 20px;
+        padding: 8px 18px; font: 500 12px/1 "Segoe UI", "Microsoft YaHei", sans-serif; letter-spacing: 1px;
+        transition: background .15s, color .15s; }
+  .ctrl .btn:hover { background: #2C2C2A; color: #EAE7DF; }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+
+<div class="panel head">
+  <div class="k">02 · TOPOLOGY</div>
+  <h1>园区网建设项目</h1>
+  <div class="sub">真机实施版 · 网络拓扑爆炸分解</div>
+  <div class="note">华为真机全流程交付<br>核心 / 汇聚 / 接入 · 安全边界 · 服务器区</div>
+</div>
+
+<div class="panel ctrl">
+  <div class="row"><label>EXPLODE</label><input type="range" id="explode" min="0" max="100" value="32"></div>
+  <button class="btn" id="btnAuto">自动展开</button>
+</div>
+
+<script>
+/* ---------- 画布 ---------- */
+const cv = document.getElementById('stage'), cx = cv.getContext('2d');
+const DW = 1000, DH = 700;
+let W, H, DPR = Math.min(2, window.devicePixelRatio || 1);
+function resize() { W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR;
+  cv.style.width = W + 'px'; cv.style.height = H + 'px'; cx.setTransform(DPR, 0, 0, DPR, 0, 0); }
+addEventListener('resize', resize); resize();
+
+const INK = '#2C2C2A', SUB = '#8A8880', LINK = '#B4B2A9';
+const layers = [
+  { name: '服务器区',  sub: '虚拟化 · 存储',  tag: 'SERVER',  color: '#378ADD', idx: 0 },
+  { name: '出口边界',  sub: 'USG6500E · NAT/安全', tag: 'EDGE', color: '#E24B4A', idx: 1 },
+  { name: '核心层',    sub: 'AR6120 · OSPF',  tag: 'CORE',   color: '#EF9F27', idx: 2 },
+  { name: '汇聚层',    sub: 'S5720 · VLAN/ACL', tag: 'DIST', color: '#97C459', idx: 3 },
+  { name: '接入层',    sub: 'AirEngine · WLAN', tag: 'ACCESS', color: '#7F77DD', idx: 4 },
+];
+let explode = 0.32, explodeT = 0.32, auto = false, autoDir = 1;
+
+/* 几何图元（线稿） */
+function rrect(x, y, w, h, r) { cx.beginPath();
+  cx.moveTo(x + r, y); cx.arcTo(x + w, y, x + w, y + h, r); cx.arcTo(x + w, y + h, x, y + h, r);
+  cx.arcTo(x, y + h, x, y, r); cx.arcTo(x, y, x + w, y, r); cx.closePath(); }
+function switchIcon(x, y) {          /* S5720 */
+  cx.strokeStyle = INK; cx.lineWidth = 1.6; rrect(x, y, 92, 34, 4); cx.stroke();
+  for (let i = 0; i < 6; i++) { cx.strokeRect(x + 8 + i * 13, y + 8, 8, 6); }
+  cx.beginPath(); cx.arc(x + 80, y + 17, 3, 0, 7); cx.fillStyle = SUB; cx.fill();
+}
+function routerIcon(x, y) {          /* AR6120 */
+  cx.strokeStyle = INK; cx.lineWidth = 1.6; rrect(x, y, 66, 30, 5); cx.stroke();
+  cx.beginPath(); cx.moveTo(x + 20, y); cx.lineTo(x + 14, y - 10); cx.moveTo(x + 46, y); cx.lineTo(x + 52, y - 10); cx.stroke();
+  for (let i = 0; i < 3; i++) { cx.beginPath(); cx.arc(x + 20 + i * 13, y + 15, 2.6, 0, 7); cx.fillStyle = INK; cx.fill(); }
+}
+function fwIcon(x, y) {              /* USG6500E 盾形 */
+  cx.strokeStyle = INK; cx.lineWidth = 1.6;
+  cx.beginPath(); cx.moveTo(x, y); cx.lineTo(x + 30, y); cx.lineTo(x + 30, y + 18);
+  cx.arc(x + 30, y + 22, 12, -Math.PI/2, Math.PI/2, false); cx.lineTo(x, y + 34); cx.lineTo(x, y + 34); cx.closePath();
+  cx.moveTo(x + 30, y + 22); cx.lineTo(x + 30, y + 34); cx.lineTo(x, y + 28); cx.stroke();
+  cx.beginPath(); cx.arc(x + 20, y + 22, 3, 0, 7); cx.fillStyle = SUB; cx.fill();
+}
+function apIcon(x, y) {              /* AirEngine */
+  cx.strokeStyle = INK; cx.lineWidth = 1.6;
+  cx.beginPath(); cx.moveTo(x, y + 8); cx.lineTo(x + 7, y - 4); cx.lineTo(x + 14, y + 8); cx.closePath(); cx.stroke();
+  cx.beginPath(); cx.arc(x + 7, y + 12, 7, Math.PI * 0.15, Math.PI * 0.85); cx.stroke();
+  cx.beginPath(); cx.arc(x + 7, y + 17, 12, Math.PI * 0.2, Math.PI * 0.8); cx.stroke();
+}
+function serverIcon(x, y) {          /* 服务器 */
+  cx.strokeStyle = INK; cx.lineWidth = 1.6; cx.strokeRect(x, y, 34, 56);
+  for (let i = 0; i < 4; i++) cx.strokeRect(x + 6, y + 8 + i * 12, 22, 4);
+  cx.beginPath(); cx.arc(x + 28, y + 52, 2, 0, 7); cx.fillStyle = '#97C459'; cx.fill();
+}
+function termIcon(x, y) {            /* 终端 */
+  cx.strokeStyle = INK; cx.lineWidth = 1.6; cx.strokeRect(x, y, 22, 18);
+  cx.beginPath(); cx.moveTo(x + 5, y + 14); cx.lineTo(x + 17, y + 14); cx.stroke();
+}
+
+function frame(now) {
+  const t = now * 0.001;
+  if (auto) { explodeT += autoDir * 0.006; if (explodeT >= 1) { explodeT = 1; autoDir = -1; }
+              if (explodeT <= 0) { explodeT = 0; autoDir = 1; auto = false; }
+              document.getElementById('explode').value = Math.round(explodeT * 100); }
+  explode += (explodeT - explode) * 0.1;
+  cx.clearRect(0, 0, W, H);
+  cx.fillStyle = '#EAE7DF'; cx.fillRect(0, 0, W, H);
+  /* 图纸网格 */
+  cx.strokeStyle = 'rgba(0,0,0,.045)'; cx.lineWidth = 1;
+  for (let x = 0; x < W; x += 28) { cx.beginPath(); cx.moveTo(x, 0); cx.lineTo(x, H); cx.stroke(); }
+  for (let y = 0; y < H; y += 28) { cx.beginPath(); cx.moveTo(0, y); cx.lineTo(W, y); cx.stroke(); }
+  /* 缩放居中 */
+  const sc = Math.min(W / DW, H / DH);
+  cx.save(); cx.translate((W - DW * sc) / 2, (H - DH * sc) / 2); cx.scale(sc, sc);
+
+  const CY = 350, baseGap = 30, explodeGap = 92;
+  const centers = {};
+  /* 层间链路（虚线 + 流动点） */
+  cx.lineWidth = 1.2;
+  for (let i = 0; i < layers.length - 1; i++) {
+    const y1 = CY + (i - 2) * baseGap + (i - 2) * explode * explodeGap;
+    const y2 = CY + (i + 1 - 2) * baseGap + (i + 1 - 2) * explode * explodeGap;
+    cx.strokeStyle = LINK; cx.setLineDash([4, 4]);
+    cx.beginPath(); cx.moveTo(470, y1 + 16); cx.lineTo(470, y2 - 16); cx.stroke();
+    cx.setLineDash([]);
+    const py = y1 + 16 + ((t * 30 + i * 18) % Math.max(1, (y2 - 16) - (y1 + 16)));
+    cx.beginPath(); cx.arc(470, Math.min(py, y2 - 16), 2.5, 0, 7); cx.fillStyle = layers[i].color; cx.fill();
+  }
+  /* 每层 */
+  layers.forEach((L, i) => {
+    const y = CY + (i - 2) * baseGap + (i - 2) * explode * explodeGap;
+    centers[L.tag] = y;
+    /* 层板 */
+    const bw = L.tag === 'SERVER' ? 250 : L.tag === 'EDGE' ? 300 : 380;
+    const bx = 470 - bw / 2;
+    cx.strokeStyle = SUB; cx.lineWidth = 1.4;
+    cx.beginPath(); cx.moveTo(bx, y); cx.lineTo(bx + bw, y); cx.stroke();
+    cx.beginPath(); cx.moveTo(bx, y); cx.lineTo(bx, y - 6); cx.moveTo(bx + bw, y); cx.lineTo(bx + bw, y - 6); cx.stroke();
+    /* 层名（左侧小字） */
+    cx.font = '600 12px Consolas, monospace'; cx.textAlign = 'right';
+    cx.fillStyle = INK; cx.fillText(L.tag, bx - 16, y + 4);
+    cx.font = '400 11px "Microsoft YaHei", sans-serif'; cx.fillStyle = SUB;
+    cx.fillText(L.name, bx - 16, y - 10);
+    /* 设备 */
+    if (L.tag === 'SERVER') { serverIcon(445, y - 56); serverIcon(485, y - 56); serverIcon(525, y - 56); }
+    if (L.tag === 'EDGE') { fwIcon(410, y - 34); routerIcon(505, y - 30); }
+    if (L.tag === 'CORE') { switchIcon(400, y - 34); switchIcon(506, y - 34); }
+    if (L.tag === 'DIST') { switchIcon(430, y - 34); switchIcon(536, y - 34); }
+    if (L.tag === 'ACCESS') { termIcon(400, y - 26); termIcon(442, y - 26); apIcon(505, y - 18); termIcon(546, y - 26); }
+    /* 引线标注（右侧） */
+    const ax = bx + bw + 24, ay = y - 14;
+    cx.strokeStyle = L.color; cx.lineWidth = 1.4;
+    cx.beginPath(); cx.moveTo(bx + bw, y); cx.lineTo(ax, ay); cx.lineTo(ax + 40, ay); cx.stroke();
+    cx.beginPath(); cx.arc(ax + 40, ay, 3.4, 0, 7); cx.fillStyle = L.color; cx.fill();
+    cx.font = '600 12px Consolas, monospace'; cx.textAlign = 'left';
+    cx.fillStyle = L.color; cx.fillText(L.sub, ax + 54, ay + 4);
+  });
+  cx.textAlign = 'left';
+  cx.restore();
+
+  /* 底部 title block */
+  const bx = 30, by = H - 78;
+  cx.strokeStyle = SUB; cx.lineWidth = 1; cx.strokeRect(bx, by, 300, 52);
+  cx.fillStyle = INK; cx.font = '600 11px Consolas, monospace';
+  cx.fillText('DWG NO. YW-CN-01', bx + 12, by + 18);
+  cx.fillText('园区网建设项目（真机实施版）', bx + 12, by + 34);
+  cx.fillStyle = SUB; cx.font = '400 11px Consolas, monospace';
+  cx.fillText('AR6120 · S5720 · USG6500E · AirEngine AP', bx + 12, by + 46);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+const sl = document.getElementById('explode');
+sl.addEventListener('input', () => { auto = false; explodeT = sl.value / 100; });
+document.getElementById('btnAuto').onclick = () => { auto = true; autoDir = explodeT < 0.5 ? 1 : -1; };
+</script>
+</body>
+</html>

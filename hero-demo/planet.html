@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>y'world · 地球内部 · 七层金属环</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body { background: radial-gradient(1200px 900px at 50% 42%, #0D1626 0%, #080D16 55%, #05080E 100%);
+         font-family: "Segoe UI", "Microsoft YaHei", sans-serif; cursor: grab; }
+  body.drag { cursor: grabbing; }
+  #stage { position: fixed; inset: 0; display: block; }
+  .ui { position: fixed; z-index: 5; pointer-events: none; }
+  .head { left: 4vw; top: 5vh; }
+  .head .k { font: 600 12px/1 Consolas, monospace; color: #6FB6F0; letter-spacing: 3px; }
+  .head h1 { font-size: clamp(22px, 2.8vw, 34px); font-weight: 600; color: #EAF4FB; margin: 10px 0 6px; letter-spacing: 1px; }
+  .head .sub { font: 400 12px/1.6 Consolas, "Microsoft YaHei", monospace; color: #5E7E9C; letter-spacing: 1px; }
+  .hint { left: 50%; bottom: 4vh; transform: translateX(-50%); text-align: center;
+          font: 400 12px/1 Consolas, "Microsoft YaHei", monospace; color: #4E6B88; letter-spacing: 2px; }
+  .hint b { color: #8FB8DC; font-weight: 400; }
+  .legend { position: fixed; right: 3vw; top: 50%; transform: translateY(-50%); z-index: 5;
+            opacity: 0; transition: opacity .6s; }
+  .legend.on { opacity: 1; }
+  .legend .t { font: 600 12px/1 Consolas, monospace; color: #8FD0F0; letter-spacing: 2px; margin-bottom: 10px; }
+  .legend .row { display: flex; align-items: center; gap: 9px; margin: 7px 0;
+                 font: 400 12px/1.5 Consolas, "Microsoft YaHei", monospace; color: #9FB8CE; }
+  .legend .sw { width: 13px; height: 13px; border-radius: 3px; flex: 0 0 13px; }
+  .legend .row b { color: #EAF4FB; font-weight: 500; margin-right: 4px; }
+  .legend .row i { font-style: normal; color: #5E7E9C; margin-left: auto; padding-left: 14px; font-size: 11px; }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div class="ui head">
+  <div class="k">STEP 02 · DIVE INTO EARTH</div>
+  <h1 id="h1">地球</h1>
+  <div class="sub" id="sub">滚轮拉近 · 钻入内部 · 拖拽换角度</div>
+</div>
+<div class="ui hint">滚轮<b>上推</b>拉近钻入内部 · 滚轮<b>下推</b>回到外观 · 拖拽换角度</div>
+<div class="legend" id="legend">
+  <div class="t">地球内部 · 七层金属环</div>
+</div>
+
+<script>
+const cv = document.getElementById('stage'), cx = cv.getContext('2d');
+let W, H, DPR = Math.min(2, window.devicePixelRatio || 1);
+function resize(){ W = innerWidth; H = innerHeight; cv.width = W*DPR; cv.height = H*DPR;
+  cv.style.width = W+'px'; cv.style.height = H+'px'; cx.setTransform(DPR,0,0,DPR,0,0); }
+addEventListener('resize', resize); resize();
+
+/* ---- 七层金属环（内→外）：独立倾角 + 独立转速 + 七种蓝色渐变 ---- */
+const LAYERS = [
+  { name:'内核',   en:'Inner Core',   r:0.24, tx:0.18, tz:0.10, sp: 1.65, sw:0.55, c:[126,200,246], d:'5150–6371 km' },
+  { name:'外核',   en:'Outer Core',   r:0.345,tx:0.60, tz:-0.42,sp:-1.30, sw:0.48, c:[ 79,168,232], d:'2890–5150 km' },
+  { name:'下地幔', en:'Lower Mantle', r:0.46, tx:1.02, tz:0.66, sp: 1.05, sw:0.40, c:[ 61,123,217], d:'660–2890 km' },
+  { name:'过渡带', en:'Transition',   r:0.575,tx:1.44, tz:-0.92,sp:-0.92, sw:0.32, c:[ 76, 92,205], d:'410–660 km' },
+  { name:'上地幔', en:'Upper Mantle', r:0.69, tx:1.86, tz:1.18, sp: 0.78, sw:0.26, c:[ 98, 82,196], d:'35–410 km' },
+  { name:'地壳',   en:'Crust',        r:0.805,tx:2.28, tz:-1.44,sp:-0.64, sw:0.20, c:[ 86, 74,180], d:'0–35 km' },
+  { name:'大气层', en:'Atmosphere',   r:0.925,tx:2.70, tz:1.70, sp: 0.50, sw:0.14, c:[ 54, 64,150], d:'外层' },
+];
+
+/* ---- 球面采样（外观） ---- */
+const N = 170, PTS = [];
+const GA = Math.PI*(3-Math.sqrt(5));
+for (let i=0;i<N;i++){ const y=1-(i/(N-1))*2, r=Math.sqrt(1-y*y), th=GA*i;
+  PTS.push([Math.cos(th)*r, y, Math.sin(th)*r]); }
+const MER = 14, PAR = 8, wires = [];
+for (let m=0;m<MER;m++){ const a=m/MER*Math.PI*2, p=[];
+  for (let k=0;k<=40;k++){ const b=-Math.PI/2+k/40*Math.PI;
+    p.push([Math.cos(a)*Math.cos(b), Math.sin(b), Math.sin(a)*Math.cos(b)]); } wires.push(p); }
+
+/* ---- 状态 ---- */
+let viewX = 0.42, viewY = 0, selfY = 0, zoom = 1, zoomT = 1;
+let vx = 0, vy = 0, g = 0, gT = 1, phase = 0;
+let dragging = false, lx = 0, ly = 0;
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+
+function project(p, R){
+  let x=p[0], y=p[1], z=p[2];
+  let X = x*Math.cos(selfY) + z*Math.sin(selfY);
+  let Z = -x*Math.sin(selfY) + z*Math.cos(selfY);
+  let Y = y*Math.cos(viewX) - Z*Math.sin(viewX);
+  let Z2 = y*Math.sin(viewX) + Z*Math.cos(viewX);
+  let X2 = X*Math.cos(viewY) + Z2*Math.sin(viewY);
+  let Z3 = -X*Math.sin(viewY) + Z2*Math.cos(viewY);
+  const f = 1/(1 - Z3*0.42);
+  return { x: X2*R*f, y: Y*R*f, z: Z3 };
+}
+const mix = (a,b,t)=>a+(b-a)*t;
+
+/* ---- 绘制一条金属环 ---- */
+function drawRing(L, R, open, t, cxp, cyp, curTx, curTz){
+  const M = 96;
+  const c = L.c;
+  /* 定向光源（左上偏前） */
+  const ln = Math.hypot(-0.55, 0.68, 0.50), lx = -0.55/ln, ly = 0.68/ln, lz = 0.50/ln;
+  const pts = [];
+  for (let k=0;k<=M;k++){
+    const th = k/M*Math.PI*2;
+    let x = Math.cos(th)*L.r, y = 0, z = Math.sin(th)*L.r;
+    let y1 = y*Math.cos(curTx) - z*Math.sin(curTx);
+    let z1 = y*Math.sin(curTx) + z*Math.cos(curTx);
+    let x2 = x*Math.cos(curTz) - y1*Math.sin(curTz);
+    let y2 = x*Math.sin(curTz) + y1*Math.cos(curTz);
+    const n = Math.hypot(x2, y2, z1) || 1;
+    const ndl = Math.max(0, (x2/n)*lx + (y2/n)*ly + (z1/n)*lz);
+    const p = project([x2, y2, z1], R);
+    pts.push({ x: p.x + cxp, y: p.y + cyp, z: p.z, ndl });
+  }
+  /* 分段描：定向打光（面向光源亮、背光暗），金属 specular 高光 */
+  const seg = 4;
+  for (let k=0;k<M;k+=seg){
+    let zAvg=0, nd=0;
+    for (let j=k;j<=k+seg;j++){ zAvg += pts[j].z; nd += pts[j].ndl; }
+    const za = zAvg/(seg+1), n = nd/(seg+1);
+    const depth = Math.max(0, Math.min(1,(za+1)/1.7));
+    const diff = 0.20 + 0.90*n;
+    const spec = Math.pow(n, 12) * 1.0;
+    const rr = Math.round(Math.min(255, c[0]*diff + 255*spec));
+    const gg = Math.round(Math.min(255, c[1]*diff + 255*spec));
+    const bb = Math.round(Math.min(255, c[2]*diff + 255*spec));
+    const alpha = (0.40 + depth*0.60) * open;
+    cx.strokeStyle = 'rgba('+rr+','+gg+','+bb+','+alpha.toFixed(3)+')';
+    cx.lineWidth = (6.5 + depth*5.5) * Math.max(0.6, zoom);
+    cx.lineCap = 'round';
+    cx.beginPath();
+    cx.moveTo(pts[k].x, pts[k].y);
+    for (let j=k+1;j<=k+seg;j++) cx.lineTo(pts[j].x, pts[j].y);
+    cx.stroke();
+  }
+}
+
+function frame(now){
+  const t = now*0.001;
+  selfY += 0.0016;
+  viewX += vx; viewY += vy; vx *= 0.94; vy *= 0.94;
+  zoom += (zoomT-zoom)*0.11;
+  g += (gT-g)*0.05;
+  phase = clamp((zoom - 1)/1.05, 0, 1);
+  if (zoom > 1.05){ viewX *= 0.94; viewY *= 0.94; }
+
+  cx.clearRect(0,0,W,H);
+  const cxp = W/2, cyp = H*0.5;
+  const R = Math.min(W,H)*0.30*zoom;
+
+  /* 外观大气辉光 */
+  if (R>2 && phase<1){
+    const ga = 1-phase;
+    const gr = cx.createRadialGradient(cxp,cyp,R*0.6,cxp,cyp,R*1.55);
+    gr.addColorStop(0,'rgba(110,180,235,'+(0.18*ga).toFixed(3)+')');
+    gr.addColorStop(0.5,'rgba(110,180,235,'+(0.06*ga).toFixed(3)+')');
+    gr.addColorStop(1,'rgba(110,180,235,0)');
+    cx.fillStyle=gr; cx.beginPath(); cx.arc(cxp,cyp,R*1.55,0,7); cx.fill();
+  }
+
+  /* 外观线框球（拉近时剥开淡出） */
+  if (phase < 1){
+    const spread = 1 + phase*0.38, lalpha = 1 - phase*phase;
+    cx.lineWidth = 1;
+    for (const line of wires){
+      let zsum=0; for (const q of line) zsum += project(q,R).z;
+      const za = zsum/line.length;
+      const alpha = Math.max(0, Math.min(1,(za+1)/1.6)) * g * lalpha;
+      if (alpha < 0.03) continue;
+      cx.strokeStyle = 'rgba(120,180,230,'+(0.06+alpha*0.22).toFixed(3)+')';
+      cx.beginPath(); let started=false;
+      for (const q of line){ const p=project(q,R*spread);
+        if(!started){cx.moveTo(p.x,p.y);started=true;} else cx.lineTo(p.x,p.y); }
+      cx.stroke();
+    }
+    for (const q of PTS){
+      const p = project(q, R*spread);
+      const a = Math.max(0, Math.min(1,(p.z+1)/1.5)) * lalpha;
+      if (a<0.02) continue;
+      cx.fillStyle = 'rgba(150,210,240,'+(0.1+a*0.8*g).toFixed(3)+')';
+      cx.beginPath(); cx.arc(cxp+p.x, cyp+p.y, (0.8+a*2.2)*Math.max(0.4,zoom), 0, 7); cx.fill();
+    }
+  }
+
+  /* 内部：七层金属环（倾角随拉近进度展开，各环独立速度环绕） */
+  if (phase > 0.01){
+    const open = ease3(phase);
+    /* 按平均深度排序绘制（远的先画） */
+    const order = LAYERS.map((L,i)=>({L,i})).sort((a,b)=>{
+      const za = ringZ(a.L,R), zb = ringZ(b.L,R);
+      return za - zb;
+    });
+    for (const o of order){
+      const a = clamp(phase*8 - (6-o.i)*0.9, 0, 1);
+      if (a < 0.02) continue;
+      const L = o.L;
+      const curTx = L.tx*open + L.sw*Math.sin(t*L.sp*1.4);
+      const curTz = L.tz*open + L.sw*Math.cos(t*L.sp*1.1);
+      cx.globalAlpha = a;
+      drawRing(L, R, open, t, cxp, cyp, curTx, curTz);
+      cx.globalAlpha = 1;
+    }
+    /* 中心实心核心（球体光照，左上高光） */
+    const pulse = 1 + Math.sin(t*2)*0.04;
+    const cr = R*0.12*pulse;
+    const kg = cx.createRadialGradient(cxp - cr*0.42, cyp - cr*0.42, cr*0.1, cxp, cyp, cr*1.45);
+    kg.addColorStop(0, '#F4FBFF');
+    kg.addColorStop(0.42, '#C6E6FA');
+    kg.addColorStop(0.78, '#82BAE8');
+    kg.addColorStop(1, '#3E72AC');
+    cx.fillStyle = kg; cx.beginPath(); cx.arc(cxp, cyp, cr*1.45, 0, 7); cx.fill();
+    cx.fillStyle = 'rgba(255,255,255,.85)';
+    cx.beginPath(); cx.arc(cxp - cr*0.34, cyp - cr*0.36, cr*0.22, 0, 7); cx.fill();
+  }
+
+  /* 外观高光 */
+  if (phase < 1){
+    const hl = project([0.5,0.5,0.7], R);
+    const hg = cx.createRadialGradient(cxp+hl.x,cyp+hl.y,0,cxp+hl.x,cyp+hl.y,R*0.5);
+    hg.addColorStop(0,'rgba(200,235,255,'+(0.28*(1-phase)).toFixed(3)+')');
+    hg.addColorStop(1,'rgba(200,235,255,0)');
+    cx.fillStyle=hg; cx.beginPath(); cx.arc(cxp+hl.x,cyp+hl.y,R*0.5,0,7); cx.fill();
+  }
+
+  document.getElementById('h1').textContent = phase>0.5 ? '地球内部 · 七层金属环' : '地球';
+  document.getElementById('legend').classList.toggle('on', phase>0.55);
+  requestAnimationFrame(frame);
+}
+function ease3(t){ return 1 - Math.pow(1-t, 3); }
+function ringZ(L, R){
+  let x = Math.cos(0)*L.r, z = Math.sin(0)*L.r;
+  let y1 = -z*Math.sin(L.tx), z1 = z*Math.cos(L.tx);
+  let x2 = x*Math.cos(L.tz) - y1*Math.sin(L.tz);
+  let y2 = x*Math.sin(L.tz) + y1*Math.cos(L.tz);
+  return project([x2, y2, z1], R).z;
+}
+requestAnimationFrame(frame);
+
+setTimeout(()=>{ gT = 1; }, 80);
+
+/* 图例 */
+const lg = document.getElementById('legend');
+LAYERS.slice().reverse().forEach(L => {
+  const row = document.createElement('div'); row.className = 'row';
+  row.innerHTML = '<span class="sw" style="background:rgb('+L.c[0]+','+L.c[1]+','+L.c[2]+')"></span><b>'+L.name+'</b>'+L.en+'<i>'+L.d+'</i>';
+  lg.appendChild(row);
+});
+
+/* 交互 */
+cv.addEventListener('pointerdown', e=>{ if(zoom>1.02) return; dragging=true; lx=e.clientX; ly=e.clientY; vx=vy=0; document.body.classList.add('drag'); });
+addEventListener('pointermove', e=>{ if(!dragging) return;
+  vx = (e.clientY-ly)*0.005; vy = (e.clientX-lx)*0.005; lx=e.clientX; ly=e.clientY; });
+addEventListener('pointerup', ()=>{ dragging=false; document.body.classList.remove('drag'); });
+cv.addEventListener('wheel', e=>{ e.preventDefault();
+  zoomT = clamp(zoomT - e.deltaY*0.0012, 1.0, 2.05); }, { passive:false });
+</script>
+</body>
+</html>

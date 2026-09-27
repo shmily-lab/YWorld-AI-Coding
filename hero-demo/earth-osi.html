@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>y'world · 地球七层 → OSI 七层</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body { background: #0A1424; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  #stage { position: fixed; inset: 0; display: block; }
+  .ui { position: fixed; z-index: 5; }
+  .top { left: 4vw; top: 5vh; }
+  .top .k { font: 600 12px/1 Consolas, monospace; color: #8FD0F0; letter-spacing: 3px; text-shadow: 0 0 12px rgba(90,180,230,.6); }
+  .top h1 { font-size: clamp(22px, 2.8vw, 34px); font-weight: 600; color: #EAF4FB; margin: 10px 0 6px; letter-spacing: 1px; }
+  .top .sub { font: 400 12px/1.6 Consolas, "Microsoft YaHei", monospace; color: #6E8CA6; letter-spacing: 1px; }
+  .bar { left: 50%; bottom: 4vh; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; }
+  .bar label { font: 400 11px/1 Consolas, monospace; color: #4E6B88; letter-spacing: 2px; }
+  .bar input { -webkit-appearance: none; width: min(60vw, 560px); height: 22px; background: transparent; cursor: pointer; }
+  .bar input::-webkit-slider-runnable-track { height: 2px; background: #1E3450; }
+  .bar input::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%;
+        background: #F0A03E; margin-top: -5px; box-shadow: 0 0 12px rgba(240,160,62,.8); }
+  .bar button { cursor: pointer; border: 1px solid #2E4A6A; background: transparent; color: #8FD0F0; border-radius: 18px;
+        padding: 6px 16px; font: 500 12px/1 "Segoe UI", "Microsoft YaHei", sans-serif; letter-spacing: 1px; }
+  .bar button:hover { background: #14314E; }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div class="ui top">
+  <div class="k" id="stageTag">STAGE · 地球入画</div>
+  <h1 id="h1">地球 · 七层结构</h1>
+  <div class="sub" id="sub">太空远景 · 蓝色大气辉光</div>
+</div>
+<div class="ui bar">
+  <label>SCRUB</label>
+  <input type="range" id="scrub" min="0" max="1600" value="0">
+  <button id="btnReplay">重新播放</button>
+</div>
+
+<script>
+const cv = document.getElementById('stage'), cx = cv.getContext('2d');
+let W, H, DPR = Math.min(2, window.devicePixelRatio || 1);
+function resize(){ W = innerWidth; H = innerHeight; cv.width = W*DPR; cv.height = H*DPR;
+  cv.style.width = W+'px'; cv.style.height = H+'px'; cx.setTransform(DPR,0,0,DPR,0,0); }
+addEventListener('resize', resize); resize();
+
+/* ---------- 七层（地球外→内 = OSI 上→下） ---------- */
+const LAYERS = [
+  { geo:'大气层', osi:'应用层', en:'Application',  r:1.000, line:'#8FD0F0' },
+  { geo:'地壳',   osi:'表示层', en:'Presentation', r:0.905, line:'#74B8E8' },
+  { geo:'上地幔', osi:'会话层', en:'Session',      r:0.805, line:'#5FA8DC' },
+  { geo:'过渡带', osi:'传输层', en:'Transport',    r:0.715, line:'#4A98D0' },
+  { geo:'下地幔', osi:'网络层', en:'Network',      r:0.585, line:'#3A86C4' },
+  { geo:'外核',   osi:'数据链路层', en:'Data Link',r:0.400, line:'#2E74B4' },
+  { geo:'内核',   osi:'物理层', en:'Physical',     r:0.210, line:'#2362A4' },
+];
+const CORE = '#F0A03E', PART = ['#F0A03E', '#F5C04E', '#E84E7E'];
+
+/* ---------- 球面（外观） ---------- */
+const N = 150, PTS = []; const GA = Math.PI*(3-Math.sqrt(5));
+for (let i=0;i<N;i++){ const y=1-(i/(N-1))*2, r=Math.sqrt(1-y*y), th=GA*i;
+  PTS.push([Math.cos(th)*r, y, Math.sin(th)*r]); }
+const MER = 14, PAR = 8, wires = [];
+for (let m=0;m<MER;m++){ const a=m/MER*Math.PI*2, p=[];
+  for (let k=0;k<=40;k++){ const b=-Math.PI/2+k/40*Math.PI;
+    p.push([Math.cos(a)*Math.cos(b), Math.sin(b), Math.sin(a)*Math.cos(b)]); } wires.push(p); }
+for (let p=1;p<PAR;p++){ const b=-Math.PI/2+p/PAR*Math.PI, pts=[];
+  for (let k=0;k<=48;k++){ const a=k/48*Math.PI*2;
+    pts.push([Math.cos(a)*Math.cos(b), Math.sin(b), Math.sin(a)*Math.cos(b)]); } wires.push(pts); }
+
+/* ---------- 时间轴 ---------- */
+const TD = 16;
+let T = 0, auto = true, last = performance.now();
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp = (a,b,t)=>a+(b-a)*t;
+const easeOut = t => 1 - Math.pow(1-t, 3);
+
+function project(p, R, viewX, viewY, selfY){
+  let x=p[0], y=p[1], z=p[2];
+  let X = x*Math.cos(selfY) + z*Math.sin(selfY);
+  let Z = -x*Math.sin(selfY) + z*Math.cos(selfY);
+  let Y = y*Math.cos(viewX) - Z*Math.sin(viewX);
+  let Z2 = y*Math.sin(viewX) + Z*Math.cos(viewX);
+  let X2 = X*Math.cos(viewY) + Z2*Math.sin(viewY);
+  let Z3 = -X*Math.sin(viewY) + Z2*Math.cos(viewY);
+  const f = 1/(1 - Z3*0.42);
+  return { x: X2*R*f, y: Y*R*f, z: Z3 };
+}
+
+/* ---------- 粒子 ---------- */
+let particles = [];
+function burst(x, y, n, speed){
+  for (let i=0;i<n;i++){ const a=Math.random()*Math.PI*2, s=speed*(0.4+Math.random()*0.8);
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:0.7,col:PART[(Math.random()*3)|0]}); }
+}
+function stepParticles(dt){
+  for (let i=particles.length-1;i>=0;i--){ const p=particles[i];
+    p.life-=dt; if(p.life<=0){ particles.splice(i,1); continue; }
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=0.97; p.vy*=0.97; }
+}
+
+/* ---------- 主渲染 ---------- */
+let lastLit = 0;
+function render(now){
+  const t = now*0.001;
+  /* 背景：深海军蓝渐变 + 星点 */
+  const bg = cx.createRadialGradient(W/2,H*0.45,0,W/2,H*0.45,Math.max(W,H)*0.75);
+  bg.addColorStop(0,'#0E1D33'); bg.addColorStop(0.55,'#0A1526'); bg.addColorStop(1,'#060C18');
+  cx.fillStyle=bg; cx.fillRect(0,0,W,H);
+  cx.fillStyle='rgba(150,200,235,.6)';
+  for (let i=0;i<60;i++){ const sx=(i*211.7)%W, sy=(i*137.3)%H;
+    const a=0.12+0.3*Math.abs(Math.sin(t*(0.4+i%5*0.2)+i));
+    cx.globalAlpha=a; cx.fillRect(sx,sy,1.6,1.6); }
+  cx.globalAlpha=1;
+
+  const cxp=W/2, cyp=H*0.5, R=Math.min(W,H)*0.28;
+  const selfY = t*0.18, viewX = 0.36, viewY = 0.34*Math.sin(t*0.22);
+  const S0 = clamp(T/3, 0, 1);                       // 入画
+  const S1 = clamp((T-3)/5, 0, 1);                   // 穿透
+  const S2 = clamp((T-8), 0, 1);                     // 内核
+  const S3 = clamp((T-9)/3, 0, 1);                   // 转场 morph
+  const S4 = clamp((T-12)/1.2, 0, 1);                // OSI 定格
+  const zoom = 1 + S1*0.95;
+
+  /* 阶段标签 */
+  const tag = document.getElementById('stageTag'), h1 = document.getElementById('h1'),
+        sub = document.getElementById('sub');
+  if (S4>0){ tag.textContent='STAGE · 万物互联'; h1.textContent='七层相依 · 万物互联'; sub.textContent='地球的七层，就是信息的七层'; }
+  else if (S3>0){ tag.textContent='STAGE · 展开转场'; h1.textContent='圆环展开'; sub.textContent='七层环 → 七层协议栈'; }
+  else if (S2>0){ tag.textContent='STAGE · 能量核心'; h1.textContent='内核能量'; sub.textContent='橙色能量核心 · 圈层高亮'; }
+  else if (S1>0){ tag.textContent='STAGE · 穿透圈层'; h1.textContent='穿透七层'; sub.textContent='逐层点亮 · 扫描环 · 数据粒子'; }
+  else { tag.textContent='STAGE · 地球入画'; h1.textContent='地球 · 七层结构'; sub.textContent='太空远景 · 蓝色大气辉光'; }
+
+  /* 穿透：逐层点亮 */
+  const layerLit = clamp(Math.floor((T-3)/0.7), 0, 7);
+  if (layerLit > lastLit){ for (let i=lastLit;i<layerLit;i++){ if(i>=0 && i<7){ const rr=LAYERS[i].r*R*zoom;
+    burst(cxp, cyp+rr*0.5, 20, 130); } } }
+  lastLit = layerLit;
+
+  /* ---------- 阶段绘制 ---------- */
+  if (S4 < 1){
+    /* 地球大气辉光（蓝色） */
+    const ga = (1-S1)*S0;
+    if (ga>0){ const g= cx.createRadialGradient(cxp,cyp,R*0.5,cxp,cyp,R*1.5);
+      g.addColorStop(0,'rgba(90,180,230,'+(0.20*ga).toFixed(3)+')');
+      g.addColorStop(0.6,'rgba(90,180,230,'+(0.07*ga).toFixed(3)+')');
+      g.addColorStop(1,'rgba(90,180,230,0)');
+      cx.fillStyle=g; cx.beginPath(); cx.arc(cxp,cyp,R*1.5,0,7); cx.fill(); }
+    /* 外观线框球（穿透时淡出） */
+    if (S1 < 0.6){
+      const la = 1 - S1/0.6;
+      cx.lineWidth=1;
+      for (const line of wires){ let zs=0; for(const q of line) zs+=project(q,R*zoom,viewX,viewY,selfY).z;
+        const za=zs/line.length, alpha=Math.max(0,Math.min(1,(za+1)/1.6))*la;
+        if(alpha<0.03) continue;
+        cx.strokeStyle='rgba(120,180,230,'+(0.05+alpha*0.24).toFixed(3)+')';
+        cx.beginPath(); let st=false;
+        for(const q of line){ const p=project(q,R*zoom,viewX,viewY,selfY);
+          if(!st){cx.moveTo(p.x,p.y);st=true;} else cx.lineTo(p.x,p.y); } cx.stroke(); }
+      for (const q of PTS){ const p=project(q,R*zoom,viewX,viewY,selfY);
+        const a=Math.max(0,Math.min(1,(p.z+1)/1.5))*la; if(a<0.02) continue;
+        cx.fillStyle='rgba(150,210,240,'+(0.1+a*0.8).toFixed(3)+')';
+        cx.beginPath(); cx.arc(cxp+p.x,cyp+p.y,(0.8+a*2.2),0,7); cx.fill(); }
+    }
+    /* 同心七层（穿透时逐层点亮，蓝色结构） */
+    if (S1 > 0 && S3 < 0.9){
+      const LIT = layerLit;
+      for (let i=0;i<7;i++){
+        const a = i < LIT ? 1 : 0;
+        if (a<0.01) continue;
+        const r = LAYERS[i].r*R*zoom;
+        cx.globalAlpha = a*(i===0?0.3:0.6)*(1-S3);
+        cx.fillStyle = '#12233A';
+        cx.beginPath(); cx.arc(cxp,cyp,r,0,Math.PI*2); cx.fill();
+        cx.globalAlpha = a*(1-S3);
+        cx.strokeStyle=LAYERS[i].line; cx.lineWidth=1.6;
+        cx.shadowColor=LAYERS[i].line; cx.shadowBlur=10;
+        cx.beginPath(); cx.arc(cxp,cyp,r,0,Math.PI*2); cx.stroke(); cx.shadowBlur=0;
+      }
+      cx.globalAlpha=1;
+      /* 内核能量核心（S2 起橙色，高亮） */
+      if (S2>0 || LIT>=7){
+        const pulse=1+Math.sin(t*3)*0.06, ir=LAYERS[6].r*R*zoom*pulse;
+        const kg=cx.createRadialGradient(cxp,cyp,0,cxp,cyp,ir*2.6);
+        kg.addColorStop(0,'rgba(255,210,120,'+(1*S2).toFixed(3)+')');
+        kg.addColorStop(0.35,'rgba(246,158,58,'+(0.85*S2).toFixed(3)+')');
+        kg.addColorStop(1,'rgba(240,120,40,0)');
+        cx.fillStyle=kg; cx.beginPath(); cx.arc(cxp,cyp,ir*2.6,0,7); cx.fill();
+      }
+      /* 扫描环 */
+      if (S1>0 && S1<1){
+        const sr = lerp(1.02, 0.16, S1)*R*zoom;
+        cx.strokeStyle='rgba(246,158,58,.95)'; cx.lineWidth=2.2;
+        cx.shadowColor='#F0A03E'; cx.shadowBlur=16;
+        cx.beginPath(); cx.arc(cxp,cyp,sr,0,Math.PI*2); cx.stroke(); cx.shadowBlur=0;
+      }
+    }
+    /* 粒子 */
+    for (const p of particles){
+      cx.globalAlpha = Math.max(0, p.life/0.7);
+      cx.fillStyle=p.col;
+      cx.shadowColor=p.col; cx.shadowBlur=6;
+      cx.beginPath(); cx.arc(p.x,p.y,2.4,0,7); cx.fill();
+      cx.shadowBlur=0;
+    }
+    cx.globalAlpha=1;
+
+    /* 转场橙色爆发环 */
+    if (S3 > 0.4 && S3 < 0.95){
+      const bp = (S3-0.4)/0.55;
+      const br = lerp(R*0.15, R*2.4, bp);
+      cx.globalAlpha = Math.sin(bp*Math.PI);
+      cx.strokeStyle='#F5B04E'; cx.lineWidth=2.6;
+      cx.shadowColor='#F0A03E'; cx.shadowBlur=20;
+      cx.beginPath(); cx.arc(cxp,cyp,br,0,Math.PI*2); cx.stroke(); cx.shadowBlur=0;
+      cx.globalAlpha=1;
+    }
+    /* 转场：七层环 morph 成七条横线 */
+    if (S3 > 0.01){
+      const m = easeOut(S3);
+      const yTop = H*0.16, yBot = H*0.84, span = 560;
+      const xL = cxp - span/2, xR = cxp + span/2;
+      const M = 64;
+      for (let i=0;i<7;i++){
+        const r = LAYERS[i].r*R*zoom;
+        const oy = yTop + (yBot-yTop)*i/6;
+        const lw = 1.2 + S4*0.8;
+        cx.strokeStyle = LAYERS[i].line; cx.lineWidth = lw;
+        cx.shadowColor = LAYERS[i].line; cx.shadowBlur = 6 + S4*6;
+        cx.beginPath();
+        for (let k=0;k<=M;k++){
+          const ang = (k/M)*Math.PI*2;
+          const cxx = cxp + Math.cos(ang)*r, cyy = cyp + Math.sin(ang)*r;
+          const lxx = lerp(xL, xR, k/M), lyy = oy;
+          const px = lerp(cxx, lxx, m), py = lerp(cyy, lyy, m);
+          if(k===0) cx.moveTo(px,py); else cx.lineTo(px,py);
+        }
+        if (m < 0.5) cx.closePath();
+        cx.stroke(); cx.shadowBlur=0;
+      }
+    }
+  }
+
+  /* ---------- OSI 七层协议栈（定格） ---------- */
+  if (S4 > 0){
+    const a = easeOut(S4);
+    const yTop = H*0.16, yBot = H*0.84, span = 560;
+    const xL = cxp - span/2, xR = cxp + span/2;
+    /* 地球曲面残影（背景大圆弧） */
+    cx.strokeStyle='rgba(120,180,230,'+(0.08*a).toFixed(3)+')'; cx.lineWidth=1;
+    cx.beginPath(); cx.arc(cxp, cyp, Math.max(W,H)*0.5, 0, Math.PI*2); cx.stroke();
+    for (let i=0;i<7;i++){
+      const oy = yTop + (yBot-yTop)*i/6;
+      /* 面板横线 */
+      cx.strokeStyle = LAYERS[i].line; cx.lineWidth = 1.4 + a*0.6;
+      cx.shadowColor = LAYERS[i].line; cx.shadowBlur = 10;
+      cx.globalAlpha = a;
+      cx.beginPath(); cx.moveTo(xL, oy); cx.lineTo(xR, oy); cx.stroke(); cx.shadowBlur=0;
+      /* 层名 */
+      cx.font = '500 13px "Microsoft YaHei", sans-serif';
+      cx.fillStyle = 'rgba(234,244,251,'+(a).toFixed(3)+')';
+      cx.fillText(LAYERS[i].osi, xL - 92, oy + 4);
+      cx.font = '400 11px Consolas, monospace';
+      cx.fillStyle = 'rgba(120,160,195,'+(a).toFixed(3)+')';
+      cx.fillText(LAYERS[i].en, xL + span + 20, oy + 3);
+      /* 层间连接细线（封装/解封装） */
+      if (i<6){ cx.strokeStyle='rgba(120,160,195,'+(0.25*a).toFixed(3)+')'; cx.lineWidth=0.8;
+        cx.beginPath(); cx.moveTo(cxp - span*0.4, oy+4); cx.lineTo(cxp - span*0.4, oy + (yBot-yTop)/6);
+        cx.moveTo(cxp + span*0.4, oy+4); cx.lineTo(cxp + span*0.4, oy + (yBot-yTop)/6); cx.stroke(); }
+    }
+    cx.globalAlpha=1;
+    /* 橙色数据流：从物理层(L1)到应用层(L7)穿梭 */
+    const df = (t*0.8)%1;
+    const dy = lerp(yBot - (yBot-yTop)/6, yTop + 4, df);
+    for (let k=0;k<5;k++){
+      const yy = dy + (k-2)*44;
+      cx.globalAlpha = a*(0.3+0.7*Math.abs(Math.sin(t*6+df*6+k)));
+      cx.fillStyle = PART[k%3];
+      cx.shadowColor = PART[k%3]; cx.shadowBlur = 10;
+      cx.beginPath(); cx.arc(cxp + Math.sin(t*5+yy*0.05)*10, yy, 3.4, 0, 7); cx.fill();
+      cx.shadowBlur=0;
+    }
+    cx.globalAlpha=1;
+  }
+
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+
+/* ---------- 循环推进 ---------- */
+function loop(now){
+  const dt = Math.min(0.05, (now-last)/1000); last = now;
+  if (auto) T = Math.min(T + dt, TD);
+  stepParticles(dt);
+  document.getElementById('scrub').value = Math.round(T*100);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ---------- 交互 ---------- */
+const scrub = document.getElementById('scrub');
+scrub.addEventListener('input', ()=>{ auto=false; T = scrub.value/100; });
+scrub.addEventListener('change', ()=>{ auto=true; });
+document.getElementById('btnReplay').onclick = ()=>{ T=0; lastLit=0; particles=[]; auto=true; };
+</script>
+</body>
+</html>

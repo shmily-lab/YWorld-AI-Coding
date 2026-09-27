@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>y'world · 地球内部 · 金属七环 (WebGL)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body { background: #0A1424; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  canvas { display: block; }
+  .ui { position: fixed; z-index: 5; pointer-events: none; }
+  .head { left: 4vw; top: 5vh; }
+  .head .k { font: 600 12px/1 Consolas, monospace; color: #8FD0F0; letter-spacing: 3px; }
+  .head h1 { font-size: clamp(22px, 2.8vw, 34px); font-weight: 600; color: #EAF4FB; margin: 10px 0 6px; letter-spacing: 1px; }
+  .head .sub { font: 400 12px/1.6 Consolas, "Microsoft YaHei", monospace; color: #5E7E9C; letter-spacing: 1px; }
+  .hint { left: 50%; bottom: 4vh; transform: translateX(-50%);
+          font: 400 12px/1 Consolas, "Microsoft YaHei", monospace; color: #4E6B88; letter-spacing: 2px; }
+  .hint b { color: #8FB8DC; font-weight: 400; }
+  .fallback { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+              color: #8FB8DC; font: 400 14px/1.8 "Microsoft YaHei", sans-serif; text-align: center; }
+</style>
+<script type="importmap">
+{ "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div class="ui head">
+  <div class="k">STEP 02 · METAL RINGS · WEBGL</div>
+  <h1>地球内部 · 七层金属环</h1>
+  <div class="sub">扁平戒指环 · LatheGeometry · 环境反射 · 辉光</div>
+</div>
+<div class="ui hint"><b>拖拽旋转</b> · 滚轮缩放 · 七环不同倾角不同速度</div>
+<div class="fallback" id="fb">Three.js 加载失败（CDN 不可达）<br>此效果需要 WebGL，或改回 Canvas 方案</div>
+
+<script>
+window.__errs = []; window.onerror = function(m){ window.__errs.push(String(m)); return false; };
+setTimeout(()=>{ if (!window.__started) document.getElementById('fb').style.display = 'flex'; }, 6000);
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+window.__started = true;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0A1424);
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(0, 1.4, 13.5);
+
+/* 环境反射：金属质感的关键 */
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+/* 灯光：定向光（左上打光）+ 环境 + 核心点光 */
+const dir = new THREE.DirectionalLight(0xcfe4ff, 2.4);
+dir.position.set(-4, 6, 5);
+scene.add(dir);
+scene.add(new THREE.AmbientLight(0x2e4060, 0.7));
+const coreLight = new THREE.PointLight(0x9fd0ff, 32, 22);
+scene.add(coreLight);
+
+/* 中央实心核心（冰蓝白金属球 + 辉光 sprite） */
+const core = new THREE.Mesh(
+  new THREE.SphereGeometry(0.95, 64, 64),
+  new THREE.MeshStandardMaterial({ color: 0xdceeff, roughness: 0.32, metalness: 0.15,
+    emissive: 0x66aaff, emissiveIntensity: 0.55 })
+);
+scene.add(core);
+
+function glowSprite(size, innerA, midA){
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(128,128,0,128,128,128);
+  gr.addColorStop(0,'rgba(190,225,255,'+innerA+')');
+  gr.addColorStop(0.4,'rgba(120,180,240,'+midA+')');
+  gr.addColorStop(1,'rgba(120,180,240,0)');
+  g.fillStyle = gr; g.fillRect(0,0,256,256);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c),
+    blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+  sp.scale.set(size, size, 1);
+  return sp;
+}
+const bigGlow = glowSprite(10.6, 0.12, 0.04);
+scene.add(bigGlow);                          /* 大环境光晕：极淡氛围，直径≈最外环 */
+const coreGlow = glowSprite(3.2, 0.85, 0.28);
+scene.add(coreGlow);                         /* 核心光晕（缩小，露出内环） */
+
+/* 七个金属戒指环：扁平带状（矩形截面扫掠），七种蓝、不同倾角、不同速度 */
+const RINGS = [
+  { r:1.55, w:0.46, th:0.10, color:0x7EC8F5, tx:0.15, tz:0.10, sp: 0.55 },
+  { r:2.05, w:0.52, th:0.11, color:0x4FA8E8, tx:0.60, tz:-0.42, sp:-0.45 },
+  { r:2.60, w:0.58, th:0.12, color:0x3D7BD9, tx:1.02, tz:0.66, sp: 0.36 },
+  { r:3.20, w:0.64, th:0.13, color:0x4A5FD0, tx:1.44, tz:-0.92, sp:-0.30 },
+  { r:3.85, w:0.70, th:0.14, color:0x5A55C8, tx:1.86, tz:1.18, sp: 0.24 },
+  { r:4.55, w:0.76, th:0.15, color:0x2A4A9E, tx:2.28, tz:-1.44, sp:-0.18 },
+  { r:5.30, w:0.82, th:0.16, color:0x16306E, tx:2.70, tz:1.70, sp: 0.12 },
+];
+function ringGeom(r, w, th){
+  const pts = [
+    new THREE.Vector2(r - w/2, -th/2),
+    new THREE.Vector2(r - w/2,  th/2),
+    new THREE.Vector2(r + w/2,  th/2),
+    new THREE.Vector2(r + w/2, -th/2),
+    new THREE.Vector2(r - w/2, -th/2),
+  ];
+  return new THREE.LatheGeometry(pts, 160);
+}
+const rings = RINGS.map(cfg => {
+  const mesh = new THREE.Mesh(
+    ringGeom(cfg.r, cfg.w, cfg.th),
+    new THREE.MeshStandardMaterial({ color: cfg.color, metalness: 0.95, roughness: 0.20 })
+  );
+  mesh.userData = cfg;
+  mesh.scale.setScalar(0.001);
+  scene.add(mesh);
+  return mesh;
+});
+
+/* 辉光后期 */
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.5, 0.72));
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0, 0);
+controls.enableDamping = true; controls.enablePan = false;
+controls.minDistance = 7; controls.maxDistance = 22;
+
+addEventListener('resize', ()=>{ camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); });
+
+const clock = new THREE.Clock();
+(function animate(){
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+  const born = Math.min(1, t/1.6), e = 1 - Math.pow(1-born, 3);
+  rings.forEach(m => {
+    const c = m.userData;
+    m.scale.setScalar(Math.max(0.001, e));
+    m.rotation.x = c.tx + Math.sin(t*c.sp*1.4)*0.30;
+    m.rotation.z = c.tz + Math.cos(t*c.sp*1.1)*0.24;
+    m.rotation.y = t*c.sp*0.55;
+  });
+  core.scale.setScalar(Math.max(0.001, e));
+  coreLight.intensity = 30 + Math.sin(t*2)*5;
+  controls.update();
+  composer.render();
+})();
+</script>
+</body>
+</html>

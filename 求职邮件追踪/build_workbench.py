@@ -12,21 +12,22 @@ OUT_DIR = r"D:\y'world\求职邮件追踪"
 sys.path.insert(0, OUT_DIR)
 import build_campus_sites as bcs  # 复用其 DATA / APPENDIX
 
-TODAY = datetime.date(2026, 9, 26)
+TODAY = datetime.date(2026, 9, 27)
 
 # ---------- 1. 待办（来自邮件追踪） ----------
 # type, 公司, 事项, 截止(datetime str), 链接, 备注
 TODOS = [
- ("笔试", "京东集团", "2027校招-安全工程师试卷-0926（100分钟，全程摄像头）", "2026-09-26 11:40",
-  "https://hr.nowcoder.com/v1/s/tz6lJ1yl#", "开考 09-26 10:00；最新版 Chrome，提前15分钟调试设备；每项目仅3次笔试机会"),
+ ("笔试", "绿盟科技", "2027校招安全工程师笔试（90分钟，nowcoder）", "2026-09-29 20:30",
+  "https://exam.nowcoder.com/cts/17530561/summary?id=BBD61093E0E09BBF5D2B1AAD67C4DCC3",
+  "开考 09-29 19:00；确认参加 https://app.mokahr.com/exam-status?attendStatus=accepted&access_token=d7424db37dc64da087d7c58bd0a3c558e129d29cff4b4409a5df7e9f963d29de ；最新版 Chrome，提前调试设备"),
  ("测评", "携程集团", "SRE工程师（2027届秋招）能力测评，约40分钟", "2026-09-28 23:59",
   "https://ctrip.ceping.com/Login/Elink?elink=VsIbc825DTDFqJfb6d5NC6lFNe7CbaMzxcChina25xBDBsULNnUzcf95Hayo6wX984A==",
-  "09-24 11:12 收到，3个工作日内；全程开摄像头、关微信QQ、勿用校园网"),
- ("投递", "米哈游 miHoYo", "岗位投递邀请（3天内有效）", "2026-09-26 23:59",
-  "https://jobs.mihoyo.com/#/campus/position?invitationToken=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJuYmYiOjE3OTAxNDI3NDE2OTIsImJpel90eXBlIjoicmVzdW1lX2ludml0YXRpb24iLCJpc3MiOiJhdHNfcmVjcnVpdCIsImV4cCI6MTc5MTM1MjM0MTY4MCwiYml6X2lkIjo3OTAzMiwiaGlyZV90eXBlIjoxLCJpYXQiOjE3OTAxNDI3NDE2OTJ9.CCqXxYSTQFOKJSr2S7gubtqw3_J7qIFle8CWTu9KufM",
-  "应届生仅能投1个职位；校招官网 jobs.mihoyo.com"),
+  "09-24 11:12 收到，3个工作日内（约09-28就是明天）；全程开摄像头、关微信QQ、勿用校园网"),
  ("测评", "深圳市卓驭科技", "综合素质测评（60~90分钟）", "2026-09-29 14:38",
   "https://zyt-hr.ceping.com/pc?aId=WyI92zBn/dfIAqlMhDSVlA==", "通行证 64262624912180；需开音视频，仅1次机会"),
+ ("投递", "途虎养车", "改一版简历适配「测试开发工程师」（2027届校招）并投递", "2026-09-30 23:59",
+  "https://www.tuhu.cn/",
+  "截止 09-30 24:00；推荐以「运维版」简历为底改（JD匹配度约60–65%），主打 AI 赋能测试：AI测试体系/平台搭建、用AI工具辅助测试、了解大模型基本能力；别拖到截止当天再投"),
  ("活动", "智联招聘", "秋招双选会报名（名企综合场 + 珠三角场）", "2026-09-30 23:59",
   "", "智联招聘 App / 站内「不设限秋招节 3.0」"),
  ("测评", "汇川技术", "27校招-联合动力 IT安全/基础设施工程师测评（20~40分钟）", "2026-10-01 23:59",
@@ -35,9 +36,6 @@ TODOS = [
   "https://h3c.ceping.com/pc?aId=rw5/jb8piton86E1gpw8Ig==", "通行证 12261871752329"),
  ("简历", "新华三技术", "完善简历信息（测试工程师岗位）", "2026-10-03 23:59",
   "https://bsurl.cn/v2/qbUni4rQ", "测评与简历两件事分开，别只做一件"),
- ("投递", "途虎养车", "改一版简历适配「测试开发工程师」（2027届校招）并投递", "2026-09-30 23:59",
-  "https://www.tuhu.cn/",
-  "截止 09-30 24:00；推荐以「运维版」简历为底改（JD匹配度约60–65%），主打 AI 赋能测试：AI测试体系/平台搭建、用AI工具辅助测试、了解大模型基本能力；别拖到截止当天再投"),
 ]
 
 # 无明确截止的待处理事项
@@ -64,6 +62,9 @@ DEAD = [
  ("未通过", "豪迈集团", "运维工程师（山东）", "09月", "测评后未通过"),
  ("未通过", "通号低空", "通信工程师", "09月", "无回应"),
  ("未通过", "上海甄汇（汇联易）", "交付业务顾问-广州-中文（复试 09-21）", "09-22", "复试未通过"),
+ ("未通过", "蚂蚁集团", "AI测试开发工程师", "09-26", "感谢信：综合评估暂不做下一步安排；如有其他志愿简历将开启后续评估"),
+ ("已过期", "京东集团", "2027校招-安全工程师试卷-0926 笔试", "09-26 10:00", "已过考期（未确认是否参加）"),
+ ("已过期", "米哈游 miHoYo", "岗位投递邀请（3天内有效）", "09-26", "邀请链接已过期"),
  ("已考", "恒生电子", "运维工程师 在线笔试", "09-23 19:00", "已考，等结果"),
  ("已考", "FunPlus 趣加", "27校招-测试工程师 笔试", "09-19 16:00", "已考，等结果"),
  ("已过期", "泸州老窖", "2027届全国校招测评", "09-20", "已过期"),
@@ -194,7 +195,7 @@ REF = [
   "简历页「是否内推」栏填码；京东物流另见 XIWC0P / C4OF2，安全类岗走 TET 技术方向"),
  ("拼多多","I7uVD7damM / d6hCrTjUqq / 7ZQpACk27E / 5gHvmTZFov","互联网/科技",
   "https://careers.pddglobalhr.com/campus/grad?t=I7uVD7damM","mid",
-  "链接 t= 后即内推码，用链接投自动计入。技术岗含安全工程师，网络/运维岗偏少"),
+  "链接 t= 后即内推码，用链接投自动计入。技术岗含安全工程师，网络/运维岗偏少。9/27 复核：正式批网申&内推 2026-09-02—2027-01-31（另一口径 12-31），7 大职类 3000+ offer"),
  ("快手","campusgFjqZbPgn / campusEeFqXrT / OlfebKXjv / dVRajCCus","互联网/科技",
   "https://campus.kuaishou.cn/recruit/campus/e/h5/#/campus/jobs?code=campusgFjqZbPgn","mid",
   "campus 前缀为小写，后面大小写敏感，整条复制"),
@@ -205,14 +206,15 @@ REF = [
  ("小红书","2HPF4F8GV90G / 47FIQM0JF0YP / 7ZYM4JHM4PN8","互联网/科技","https://job.xiaohongshu.com/campus","mid","校招官网内推码栏"),
  ("得物","JABXADV / VJCQFZW / N9MNWZW / A7KBHYB / 8H2Z2ZZ","互联网/科技","https://www.dewu.com/campus","mid","选岗后找「大使推荐」栏填入"),
  ("微博","NTA1Uv4 / NTAcc9p","互联网/科技","https://app.mokahr.com/social-recruitment/sina/43535?locale=zh-CN#/","low",
-  "第 4 位是数字 1 不是小写 l，建议整条复制；2027届技术专场含系统开发/测试开发工程师（测试开发对口你的测试方向）。官网 career.sina.com.cn，网申与内推码在 mokahr 页填写"),
+  "第 4 位是数字 1 不是小写 l，建议整条复制；2027届技术专场含系统开发/测试开发工程师（测试开发对口你的测试方向）。官网 career.sina.com.cn，网申与内推码在 mokahr 页填写。9/27 复核：北航就业网 27 届简章确认该 mokahr 地址即官方校招网申入口（域名含 social-recruitment 但确为校招通道），岗位均 Base 北京"),
  ("知乎","NTAm131","互联网/科技","https://app.mokahr.com/recommendation-apply/zhihu/3820","low",
-  "仅见于聚合平台，官方只在高校宣讲说「找学长学姐内推」，未公布公开码，请先小范围验证"),
+  "仅见于聚合平台，官方只在高校宣讲说「找学长学姐内推」，未公布公开码，请先小范围验证。9/27 复核：27 届校招进行中（清华/北师大就业网已挂），技术研发类含大模型安全研究员、爬虫安全、测试开发；校招邮箱 campushr@zhihu.com"),
  ("携程","NTArwr3 / NTAfGS2 / NTAgLiM / NTA6LY0","互联网/科技","https://campus.ctrip.com/","mid","你已在走 SRE 测评流程，补码可优先筛选"),
  ("唯品会","NTAArwH / NTAAsUz","互联网/科技","https://campus.vip.com/","mid","校招官网推荐码栏"),
  ("金山办公 WPS","DSmB8bjW / NTA79r2","互联网/科技","https://www.wps.cn/","mid","推荐码栏填入"),
  ("顺丰","5CC6RA","互联网/科技","https://campus.sf-express.com/","mid","顺丰科技/顺丰航空通用"),
- ("货拉拉","NTAf566","互联网/科技","https://join.huolala.cn/","mid","推荐码栏"),
+ ("货拉拉","NTAf566","互联网/科技","https://join.huolala.cn/","mid",
+  "推荐码栏。9/27 复核：2027 届校招 8/13 开放网申、招满即止，技术岗含「信息安全运营」「测试工程师」；投递官网 join.huolala.cn → 校园招聘"),
  ("途虎养车","DSy4HXDP","互联网/科技","https://www.tuhu.cn/","mid","推荐码栏"),
  ("科大讯飞","EV3RHG / EV3RHJ / IZKMGG / EVBRH0 / ESVCHR","互联网/科技","https://iflytek.zhiye.com/campus/jobs","mid",
   "EV3RHG 源自高校就业网。注意 27 届主要开放的是转正实习岗"),
@@ -224,7 +226,7 @@ REF = [
   "两个版本都流传（2027XXZLMDWW / 2027XZLMDWW），填不上就换；信息来源选「联想员工推荐」后录码"),
  ("智元机器人","XP9JUTE","互联网/科技","https://agirobot.jobs.feishu.cn/s/WIVzPj3j3IE","mid","投递时选「大使推荐」通道再填码"),
  ("浪潮集团","jX7PlGU / 6Bbui47","互联网/科技","https://inspur.hcmcloud.cn/recruit#/campus_category?type=campus","mid",
-  "jX7PlGU 首字母小写 j、含数字 7、GU 前是小写 l；6Bbui47 含数字 6 与 47"),
+  "jX7PlGU 首字母小写 j、含数字 7、GU 前是小写 l；6Bbui47 含数字 6 与 47。9/27 复核：校招官网入口为 career.inspur.com/campus2027/index.html（中科院/北科大/郑大简章一致），技术类 150+ 人含测试、实施、数据中心专业工程师"),
  ("基恩士 KEYENCE","ESVW23 / EVVWB0 / ESVWAG / ES3JR1 / ESVJGG","制造/消费电子","https://www.keyence.com.cn/careers","mid",
   "专业不限全员可投，27 届专属（2026.9–2027.8 毕业）"),
  ("传音控股","EVH89B","制造/消费电子","https://transsion.zhiye.com/campus","mid","深沪渝有岗，支持海外派驻"),
@@ -262,7 +264,7 @@ REF = [
   "X3448036 出自华中农业大学就业网官方简章，最稳妥；每人最多 2 个志愿"),
  ("大疆 DJI","DSGz7tGD / DSvFhRaB / DSKeRdhz","互联网/科技",
   "https://app.mokahr.com/m/campus_apply/dji/143359?recommendCode=DSGz7tGD#/jobs","high",
-  "DSGz7tGD 来自温州大学/中国矿大(北京)就业网正式简章。★ 27 届「拓疆者」含信息安全岗；每人限投 1 个职位且投递后无法更改"),
+  "DSGz7tGD 来自温州大学/中国矿大(北京)就业网正式简章。★ 27 届「拓疆者」含信息安全岗；每人限投 1 个职位且投递后无法更改。9/27 复核：不设网申截止、招满即止，在招职位以供应链/电商/市场类为主"),
  # —— 制造 / 半导体 / 汽车 ——
  ("宁德时代","DS8Msaj4 / DSWb7qYg / DS85hmhK / DSgVdcN4","制造/半导体/汽车",
   "https://app.mokahr.com/m/campus-recruitment/catlhr/148948?recommendCode=DS8Msaj4#/jobs","mid",
@@ -291,7 +293,8 @@ REF = [
  ("阳光电源","NTAuMBe / NTAwHpR / NTAuBxF","制造/半导体/汽车","https://jobs.sungrowpower.com/","mid","推荐码栏"),
  ("远景能源","DSYMXZk1 / NTAMT0m / DSC64ted / DSK3HYpH","制造/半导体/汽车","https://envision-career.com","mid","推荐码栏"),
  ("金风科技","ISKP8G / IVVP80","制造/半导体/汽车","https://www.goldwind.com/","mid","推荐码栏"),
- ("三一集团","ESKMBS / ESKM1A / EVKM80 / EVKM9J","制造/半导体/汽车","https://sany.zhiye.com/campus","mid","推荐码栏"),
+ ("三一集团","ESKMBS / ESKM1A / EVKM80 / EVKM9J","制造/半导体/汽车","https://sany.zhiye.com/campus","mid",
+  "推荐码栏。9/27 复核：校招公告网申入口为 sany.zhiye.com/campus/jobs，截止口径不一（牛企直聘 10-26、福建农林/中国海洋大学就业网 11-30），按 10-26 投最保险"),
  ("豪迈集团","EVHPGS","制造/半导体/汽车","https://www.himile.com/","mid","推荐码栏"),
  ("华勤技术","NTArpLU / NTAjpG8","制造/消费电子","https://campus.huaqin.com/","mid","推荐码栏"),
  ("九号公司","NTAvBkk","制造/消费电子","https://www.ninebot.com/","mid","推荐码栏"),
@@ -440,6 +443,7 @@ ALIAS = [
     ("湖北亿纬动力（亿纬锂能）", "亿纬锂能"), ("亿纬锂能（社招）", "亿纬锂能"),
     # 台账里带英文缩写后缀，会被 NOT_SAME("腾讯","腾讯音乐") 的子串规则误杀，显式配对
     ("腾讯音乐 TME", "腾讯音乐"), ("腾讯音乐TME", "腾讯音乐"),
+    ("正浩创新 EcoFlow", "正浩 EcoFlow"),
 ]
 
 
@@ -946,8 +950,8 @@ const pkey = d => ['P', d.type||'', d.comp||'', d.item||''].join('|');
 let SHOW_DONE = false;
 // —— 公司名同指判断（复刻 Python is_same），用于「✓已投」实时联动内推码 tab ——
 const _NOTSAME = [["京东","京东方"],["京东","京东物流"],["腾讯","腾讯音乐"],["腾讯","腾讯健康"],["阿里","阿里健康"],["中国通号","通号"],["中国电信","中国移动"],["中国电信","中国联通"],["招商银行","招银网络科技"],["中国工商银行","中国建设银行"],["中国工商银行","中国农业银行"],["中国工商银行","交通银行"],["中国工商银行","中国邮政储蓄银行"],["中国工商银行","中信银行"],["中国工商银行","浦发银行"],["中国工商银行","兴业银行"],["中国工商银行","中国民生银行"],["东风汽车","长安汽车"],["东风汽车","上汽集团"],["东风汽车","广汽集团"],["东风汽车","吉利控股"],["东风汽车","小鹏汽车"],["东风汽车","理想汽车"],["东风汽车","蔚来"],["东风汽车","比亚迪"],["通号工程局集团","通号工程电气化局"],["通号工程局集团","通号低空"],["通号工程电气化局","通号低空"],["通号低空","北京现代通号工程咨询"]];
-const _ALIAS = [["中国移动湖北公司","中国移动"],["湖北移动","中国移动"],["中国电信","中国电信"],["千问（阿里巴巴）","阿里巴巴"],["智元机器人（AGIBOT）","智元机器人"],["网易（互娱）","网易"],["湖北亿纬动力（亿纬锂能）","亿纬锂能"],["亿纬锂能（社招）","亿纬锂能"],["腾讯音乐 TME","腾讯音乐"],["腾讯音乐TME","腾讯音乐"]];
-const _SHORT = ["小米","海尔","美的","格力","华为","中兴","联想","大疆","蔚来","吉利","百度","美团","腾讯","网易","字节","京东","顺丰","海信","长虹","比亚迪","宁德","三一","浪潮","金蝶","长城","长安","广汽","上汽","东风","奇瑞","海康","大华","oppo","vivo","携程","滴滴","快手","微博","知乎","拼多多"];
+const _ALIAS = [["中国移动湖北公司","中国移动"],["湖北移动","中国移动"],["中国电信","中国电信"],["千问（阿里巴巴）","阿里巴巴"],["智元机器人（AGIBOT）","智元机器人"],["网易（互娱）","网易"],["湖北亿纬动力（亿纬锂能）","亿纬锂能"],["亿纬锂能（社招）","亿纬锂能"],["腾讯音乐 TME","腾讯音乐"],["腾讯音乐TME","腾讯音乐"],["正浩创新 EcoFlow","正浩 EcoFlow"]];
+const _SHORT = ["小米","海尔","美的","格力","华为","中兴","联想","大疆","蔚来","吉利","百度","美团","腾讯","网易","字节","京东","顺丰","海信","长虹","比亚迪","宁德","三一","浪潮","金蝶","长城","长安","广汽","上汽","东风","奇瑞","海康","大华","oppo","vivo","携程","滴滴","快手","微博","知乎","拼多多","荣耀","哔哩哔哩"];
 function _norm(s){ s=String(s||''); for(const ch of " （）()·-/&"){ s=s.split(ch).join(''); } return s.toLowerCase(); }
 function isSame(a,b){
   const na=_norm(a), nb=_norm(b);
