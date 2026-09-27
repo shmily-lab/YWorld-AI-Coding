@@ -33,7 +33,7 @@
   <h1>地球内部 · 七层金属环</h1>
   <div class="sub">扁平戒指环 · LatheGeometry · MSAA 8x · 柔和环境反射</div>
 </div>
-<div class="ui hint"><b>拖拽旋转</b> · 滚轮缩放 · 七环不同倾角不同速度</div>
+<div class="ui hint"><b>拖拽旋转</b> · 滚轮缩放 · 共面开局 · 8 秒内散开再合拢 · 七环速度各异</div>
 <div class="fallback" id="fb">Three.js 加载失败（CDN 不可达）<br>此效果需要 WebGL，或改回 Canvas 方案</div>
 
 <script>
@@ -176,7 +176,9 @@ function ringGeom(r, w, th, seg){
   ], seg);
 }
 const SEG = 320;                    /* 大半径环也不出多边形棱 */
-const SPIN = 0.75;                  /* 进动速度系数：原 0.5 的 1.5 倍 */
+const SPIN = 1.50;                  /* 进动速度系数（原 0.5 的 3 倍） */
+const SHOW = 8.0;                   /* 入场演出总时长：共面 → 散开 → 合拢 */
+const FOLD_END = 0.12;              /* 合拢后保留的倾角比例：看着是一个盘，但留一点层次和动感 */
 const rings = RINGS.map(cfg => {
   const mesh = new THREE.Mesh(
     ringGeom(cfg.r, cfg.w, cfg.th, SEG),
@@ -230,12 +232,16 @@ window.__fps = 0;
   requestAnimationFrame(animate);
   const t = clock.getElapsedTime();
   const born = Math.min(1, t/1.6), e = 1 - Math.pow(1-born, 3);
-  /* 倾角展开比缩放慢一拍：先看到一个完整的共面盘，再缓缓散成扇形 */
-  const tb = Math.min(1, t/3.2), te = 1 - Math.pow(1-tb, 3);
+  /* 8 秒演出：t=0 共面 → t=4 散到最大 → t=8 合拢回一个盘（留 FOLD_END 的余角） */
+  const p = Math.min(1, t/SHOW);
+  const open = 0.5 - 0.5*Math.cos(2*Math.PI*p);            /* 0 → 1 → 0，两端平滑 */
+  const s = Math.min(1, Math.max(0, (p - 0.5)/0.5));       /* 后半段 0 → 1 */
+  const te = open + FOLD_END * (s*s*(3 - 2*s));            /* smoothstep 叠加余角 */
+  window.__te = te;
   rings.forEach(m => {
     const c = m.userData;
     m.scale.setScalar(Math.max(0.001, e));
-    /* 入场时七环共面，随入场进度展开成扇形；e=0 时倾角全为 0 */
+    /* 倾角随演出开合：共面 → 扇形 → 合拢 */
     m.rotation.x = c.tx * te;
     m.rotation.z = c.tz * te;
     m.rotation.y = t * c.sp * SPIN;   /* 缓慢进动，速度各异 */
