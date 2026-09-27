@@ -31,7 +31,7 @@
 <div class="ui head">
   <div class="k">STEP 02 · METAL RINGS · WEBGL</div>
   <h1>地球内部 · 七层金属环</h1>
-  <div class="sub">扁平戒指环 · LatheGeometry · 环境反射 · 辉光</div>
+  <div class="sub">扁平戒指环 · LatheGeometry · MSAA 8x · 柔和环境反射</div>
 </div>
 <div class="ui hint"><b>拖拽旋转</b> · 滚轮缩放 · 七环不同倾角不同速度</div>
 <div class="fallback" id="fb">Three.js 加载失败（CDN 不可达）<br>此效果需要 WebGL，或改回 Canvas 方案</div>
@@ -44,42 +44,78 @@ setTimeout(()=>{ if (!window.__started) document.getElementById('fb').style.disp
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 window.__started = true;
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+/* ── 画质档位 ──────────────────────────────────────────────
+   MSAA 必须挂在 composer 的 RenderTarget 上：
+   WebGLRenderer 的 antialias 只作用于直接渲染，走后期时完全失效。 */
+const DPR = Math.min(2, devicePixelRatio || 1);
+const SAMPLES = DPR >= 2 ? 4 : 8;          /* 高分屏降一档，保帧率 */
+
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.setPixelRatio(DPR);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.22;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0A1424);
 
 const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
-camera.position.set(0, 1.4, 13.5);
+camera.position.set(0, 1.5, 14.5);
 
-/* 环境反射：金属质感的关键 */
+/* ── 环境反射：自绘渐变天空（柔和高光带，无硬边矩形） ────── */
+function makeEnvTexture(){
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
+  const g = c.getContext('2d');
+  const lin = g.createLinearGradient(0, 0, 0, 512);
+  lin.addColorStop(0.00, '#ffffff');   /* 天顶冷白 */
+  lin.addColorStop(0.35, '#8fb0d2');
+  lin.addColorStop(0.55, '#3c6288');
+  lin.addColorStop(1.00, '#0b1a2a');   /* 底部深蓝黑 */
+  g.fillStyle = lin; g.fillRect(0, 0, 1024, 512);
+
+  const soft = (cx, cy, r, a) => {
+    const rg = g.createRadialGradient(cx, cy, 0, cx, cy, r);
+    rg.addColorStop(0, 'rgba(255,255,255,'+a+')');
+    rg.addColorStop(0.5, 'rgba(210,232,255,'+(a*0.35)+')');
+    rg.addColorStop(1, 'rgba(210,232,255,0)');
+    g.fillStyle = rg; g.fillRect(0, 0, 1024, 512);
+  };
+  soft(300, 90,  330, 1.00);   /* 主高光：左上一片柔光 */
+  soft(760, 170, 260, 0.55);   /* 副高光：右侧补一点 */
+  soft(520, 430, 340, 0.18);   /* 底部微微回弹 */
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
 const pmrem = new THREE.PMREMGenerator(renderer);
-scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+pmrem.compileEquirectangularShader();
+const envSrc = makeEnvTexture();
+scene.environment = pmrem.fromEquirectangular(envSrc).texture;
+envSrc.dispose(); pmrem.dispose();
 
 /* 灯光：定向光（左上打光）+ 环境 + 核心点光 */
-const dir = new THREE.DirectionalLight(0xcfe4ff, 2.4);
+const dir = new THREE.DirectionalLight(0xcfe4ff, 2.0);
 dir.position.set(-4, 6, 5);
 scene.add(dir);
 scene.add(new THREE.AmbientLight(0x2e4060, 0.7));
-const coreLight = new THREE.PointLight(0x9fd0ff, 32, 22);
+const coreLight = new THREE.PointLight(0x9fd0ff, 20, 22);
 scene.add(coreLight);
 
-/* 中央实心核心（冰蓝白金属球 + 辉光 sprite） */
+/* 中央实心核心（收敛的冰蓝白球，不刺眼） */
 const core = new THREE.Mesh(
   new THREE.SphereGeometry(0.95, 64, 64),
-  new THREE.MeshStandardMaterial({ color: 0xdceeff, roughness: 0.32, metalness: 0.15,
-    emissive: 0x66aaff, emissiveIntensity: 0.55 })
+  new THREE.MeshStandardMaterial({ color: 0xd8ecff, roughness: 0.35, metalness: 0.1,
+    emissive: 0x5588cc, emissiveIntensity: 0.28 })
 );
 scene.add(core);
 
@@ -96,35 +132,55 @@ function glowSprite(size, innerA, midA){
   sp.scale.set(size, size, 1);
   return sp;
 }
-const bigGlow = glowSprite(10.6, 0.12, 0.04);
-scene.add(bigGlow);                          /* 大环境光晕：极淡氛围，直径≈最外环 */
-const coreGlow = glowSprite(3.2, 0.85, 0.28);
-scene.add(coreGlow);                         /* 核心光晕（缩小，露出内环） */
+const coreGlow = glowSprite(2.6, 0.55, 0.18);
+scene.add(coreGlow);                         /* 核心柔和光晕（极小，点到为止） */
 
-/* 七个金属戒指环：扁平带状（矩形截面扫掠），七种蓝、不同倾角、不同速度 */
+/* ── 七个金属戒指环 ───────────────────────────────────────
+   倾角收敛为小幅扇形（视觉更稳），并且**径向区间强制不重叠**：
+   任意两环平面都有一条过原点的公共交线，只要径向区间重叠就必然实体相交，
+   所以留间隙 GAP 才是根除穿模的唯一手段。                       */
+const GAP = 0.07;      /* 相邻环径向安全间隙 */
+const W_SCALE = 0.92;  /* 环宽微收，换取间隙，肉眼几乎无感 */
 const RINGS = [
-  { r:1.55, w:0.46, th:0.10, color:0x7EC8F5, tx:0.15, tz:0.10, sp: 0.55 },
-  { r:2.05, w:0.52, th:0.11, color:0x4FA8E8, tx:0.60, tz:-0.42, sp:-0.45 },
-  { r:2.60, w:0.58, th:0.12, color:0x3D7BD9, tx:1.02, tz:0.66, sp: 0.36 },
-  { r:3.20, w:0.64, th:0.13, color:0x4A5FD0, tx:1.44, tz:-0.92, sp:-0.30 },
-  { r:3.85, w:0.70, th:0.14, color:0x5A55C8, tx:1.86, tz:1.18, sp: 0.24 },
-  { r:4.55, w:0.76, th:0.15, color:0x2A4A9E, tx:2.28, tz:-1.44, sp:-0.18 },
-  { r:5.30, w:0.82, th:0.16, color:0x16306E, tx:2.70, tz:1.70, sp: 0.12 },
+  { w:0.50, th:0.10, color:0xA9D4EE, tx:-0.60, tz: 0.10, sp: 0.42 },
+  { w:0.56, th:0.11, color:0x8FC3E8, tx:-0.40, tz:-0.14, sp:-0.36 },
+  { w:0.62, th:0.12, color:0x6FAEDC, tx:-0.20, tz: 0.18, sp: 0.30 },
+  { w:0.68, th:0.13, color:0x4E93CE, tx: 0.00, tz:-0.22, sp:-0.24 },
+  { w:0.74, th:0.14, color:0x3A7BB8, tx: 0.20, tz: 0.26, sp: 0.19 },
+  { w:0.80, th:0.15, color:0x2A64A0, tx: 0.40, tz:-0.30, sp:-0.14 },
+  { w:0.86, th:0.16, color:0x1B4C80, tx: 0.60, tz: 0.34, sp: 0.10 },
 ];
-function ringGeom(r, w, th){
-  const pts = [
-    new THREE.Vector2(r - w/2, -th/2),
-    new THREE.Vector2(r - w/2,  th/2),
-    new THREE.Vector2(r + w/2,  th/2),
-    new THREE.Vector2(r + w/2, -th/2),
-    new THREE.Vector2(r - w/2, -th/2),
-  ];
-  return new THREE.LatheGeometry(pts, 160);
+/* 自动排布半径：保证 out_i + GAP <= in_{i+1}，从此不可能相交 */
+(function layoutRadii(){
+  let inner = 1.30;                 /* 最内环内沿（核心球半径 0.95，留有余量） */
+  RINGS.forEach(c => {
+    c.w *= W_SCALE;
+    c.r = inner + c.w/2;
+    inner = inner + c.w + GAP;
+  });
+})();
+
+/* 倒角截面：让高光边缘连续，不再碎闪 */
+function ringGeom(r, w, th, seg){
+  const c = Math.min(0.02, th*0.22, w*0.12);
+  return new THREE.LatheGeometry([
+    new THREE.Vector2(r - w/2,       -th/2 + c),
+    new THREE.Vector2(r - w/2,        th/2 - c),
+    new THREE.Vector2(r - w/2 + c,    th/2),
+    new THREE.Vector2(r + w/2 - c,    th/2),
+    new THREE.Vector2(r + w/2,        th/2 - c),
+    new THREE.Vector2(r + w/2,       -th/2 + c),
+    new THREE.Vector2(r + w/2 - c,   -th/2),
+    new THREE.Vector2(r - w/2 + c,   -th/2),
+    new THREE.Vector2(r - w/2,       -th/2 + c),
+  ], seg);
 }
+const SEG = 320;                    /* 大半径环也不出多边形棱 */
 const rings = RINGS.map(cfg => {
   const mesh = new THREE.Mesh(
-    ringGeom(cfg.r, cfg.w, cfg.th),
-    new THREE.MeshStandardMaterial({ color: cfg.color, metalness: 0.95, roughness: 0.20 })
+    ringGeom(cfg.r, cfg.w, cfg.th, SEG),
+    new THREE.MeshStandardMaterial({ color: cfg.color, metalness: 0.90, roughness: 0.30,
+      envMapIntensity: 1.45 })
   );
   mesh.userData = cfg;
   mesh.scale.setScalar(0.001);
@@ -132,20 +188,42 @@ const rings = RINGS.map(cfg => {
   return mesh;
 });
 
-/* 辉光后期 */
-const composer = new EffectComposer(renderer);
+/* ── 后期：MSAA RenderTarget + 收敛的辉光 + 正确的输出链 ── */
+const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, {
+  type: THREE.HalfFloatType,
+  samples: SAMPLES,
+});
+const composer = new EffectComposer(renderer, rt);
+composer.setPixelRatio(DPR);
+composer.setSize(innerWidth, innerHeight);
 composer.addPass(new RenderPass(scene, camera));
-composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.5, 0.72));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.26, 0.60, 0.80));
+composer.addPass(new OutputPass());   /* ACES + sRGB 走完整链路 */
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0);
 controls.enableDamping = true; controls.enablePan = false;
-controls.minDistance = 7; controls.maxDistance = 22;
+controls.minDistance = 7; controls.maxDistance = 26;
 
-addEventListener('resize', ()=>{ camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); });
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+});
+
+/* 自检钩子（不参与渲染） */
+window.__diag = () => ({
+  dpr: DPR, samples: SAMPLES,
+  rtSamples: composer.renderTarget1.samples,
+  bands: RINGS.map(c => [ +(c.r - c.w/2).toFixed(3), +(c.r + c.w/2).toFixed(3) ]),
+  minGap: RINGS.slice(1).reduce((m, c, i) => Math.min(m, (c.r - c.w/2) - (RINGS[i].r + RINGS[i].w/2)), 99),
+  errs: window.__errs,
+  calls: renderer.info.render.calls, tris: renderer.info.render.triangles,
+});
 
 const clock = new THREE.Clock();
+let frames = 0, t0 = performance.now();
+window.__fps = 0;
 (function animate(){
   requestAnimationFrame(animate);
   const t = clock.getElapsedTime();
@@ -153,14 +231,16 @@ const clock = new THREE.Clock();
   rings.forEach(m => {
     const c = m.userData;
     m.scale.setScalar(Math.max(0.001, e));
-    m.rotation.x = c.tx + Math.sin(t*c.sp*1.4)*0.30;
-    m.rotation.z = c.tz + Math.cos(t*c.sp*1.1)*0.24;
-    m.rotation.y = t*c.sp*0.55;
+    m.rotation.x = c.tx;              /* 倾角固定，稳重 */
+    m.rotation.z = c.tz;
+    m.rotation.y = t * c.sp * 0.5;    /* 缓慢进动，速度各异 */
   });
   core.scale.setScalar(Math.max(0.001, e));
-  coreLight.intensity = 30 + Math.sin(t*2)*5;
+  coreLight.intensity = 14 + Math.sin(t*2)*1.2;
   controls.update();
   composer.render();
+  frames++;
+  if (performance.now() - t0 > 1000){ window.__fps = Math.round(frames * 1000 / (performance.now() - t0)); frames = 0; t0 = performance.now(); }
 })();
 </script>
 </body>
