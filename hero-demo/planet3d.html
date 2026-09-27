@@ -33,7 +33,7 @@
   <h1>地球内部 · 七层金属环</h1>
   <div class="sub">扁平戒指环 · LatheGeometry · MSAA 8x · 柔和环境反射</div>
 </div>
-<div class="ui hint"><b>拖拽旋转</b> · 滚轮缩放 · 共面开局 · 8 秒内散开再合拢 · 七环速度各异</div>
+<div class="ui hint"><b>拖拽旋转</b> · 滚轮缩放 · 开盘 → 8 秒散开再合拢 · 七环自转速度各异</div>
 <div class="fallback" id="fb">Three.js 加载失败（CDN 不可达）<br>此效果需要 WebGL，或改回 Canvas 方案</div>
 
 <script>
@@ -68,7 +68,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0A1424);
 
 const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
-camera.position.set(0, 1.5, 14.5);
+camera.position.set(0, 0.9, 17.4);   /* 盘立起来后竖直占 ±6.1，拉远并压低俯视角 */
 
 /* ── 环境反射：自绘渐变天空（柔和高光带，无硬边矩形） ────── */
 function makeEnvTexture(){
@@ -176,19 +176,53 @@ function ringGeom(r, w, th, seg){
   ], seg);
 }
 const SEG = 320;                    /* 大半径环也不出多边形棱 */
-const SPIN = 1.50;                  /* 进动速度系数（原 0.5 的 3 倍） */
+const SPIN = 3.00;                  /* 自转速度系数（绕环自身对称轴，靠周向纹理才看得见） */
 const SHOW = 8.0;                   /* 入场演出总时长：共面 → 散开 → 合拢 */
 const FOLD_END = 0.12;              /* 合拢后保留的倾角比例：看着是一个盘，但留一点层次和动感 */
+
+/* 周向明暗贴图：圆环绕自身轴旋转是对称的、看不出在转，
+   所以给环面加几条柔和的明暗带，自转时这些带子绕圈跑，运动才看得见。 */
+const MAXANISO = renderer.capabilities.getMaxAnisotropy();
+function bandTexture(kind){
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 8;
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, 1024, 8);          /* 底色：保持环本色 */
+  const band = (x, w, col) => {
+    const lg = g.createLinearGradient(x - w, 0, x + w, 0);
+    lg.addColorStop(0, 'rgba(255,255,255,0)');
+    lg.addColorStop(0.5, col);
+    lg.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = lg; g.fillRect(x - w, 0, 2*w, 8);
+  };
+  const BANDS = [[300, 110, 0.55], [700, 60, 0.35], [880, 36, 0.25]];
+  BANDS.forEach(([x, w, a]) => band(x, w,
+    kind === 'rough' ? 'rgba(85,85,85,'+Math.min(0.95, a*1.7)+')'   /* 带区更光滑 → 反射出亮弧 */
+                     : 'rgba(110,155,195,'+Math.min(0.8, a*1.4)+')')); /* 带区压暗 → 明暗节奏 */
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;      /* 周向无缝 */
+  if (kind !== 'rough') tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = MAXANISO;
+  return tex;
+}
+const ringTex = bandTexture('map');
+const ringRough = bandTexture('rough');
+
+/* 盘基准：把环从水平(XZ)立起来成竖直(XY)，正对镜头才"看得出是个盘" */
+const disc = new THREE.Group();
+disc.rotation.x = Math.PI/2;
+scene.add(disc);
+
 const rings = RINGS.map(cfg => {
   const mesh = new THREE.Mesh(
     ringGeom(cfg.r, cfg.w, cfg.th, SEG),
     new THREE.MeshStandardMaterial({ color: cfg.color, metalness: 0.90, roughness: 0.30,
-      envMapIntensity: 1.45 })
+      envMapIntensity: 1.45, map: ringTex, roughnessMap: ringRough })
   );
-  mesh.userData = cfg;
+  const pivot = new THREE.Group();      /* 倾角（开合）与自转解耦：自转永远绕环自身轴 */
+  pivot.add(mesh);
+  disc.add(pivot);
   mesh.scale.setScalar(0.001);
-  scene.add(mesh);
-  return mesh;
+  return { mesh, pivot, cfg };
 });
 
 /* ── 后期：MSAA RenderTarget + 收敛的辉光 + 正确的输出链 ── */
@@ -206,7 +240,7 @@ composer.addPass(new OutputPass());   /* ACES + sRGB 走完整链路 */
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0);
 controls.enableDamping = true; controls.enablePan = false;
-controls.minDistance = 7; controls.maxDistance = 26;
+controls.minDistance = 9; controls.maxDistance = 30;
 
 addEventListener('resize', ()=>{
   camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
@@ -219,7 +253,14 @@ window.__diag = () => ({
   dpr: DPR, samples: SAMPLES,
   rtSamples: composer.renderTarget1.samples,
   bands: RINGS.map(c => [ +(c.r - c.w/2).toFixed(3), +(c.r + c.w/2).toFixed(3) ]),
-  tilt: rings.map(m => [ +m.rotation.x.toFixed(3), +m.rotation.z.toFixed(3) ]),
+  tilt: rings.map(r => [ +r.pivot.rotation.x.toFixed(3), +r.pivot.rotation.z.toFixed(3) ]),
+  /* 外环最外两点投影到 NDC，|值|<1 表示完整在画面内 */
+  fit: (() => {
+    const nd = v => { const q = new THREE.Vector3(v[0], 0, v[1]); rings[6].mesh.localToWorld(q); q.project(camera); return [ +q.x.toFixed(2), +q.y.toFixed(2) ]; };
+    const R = RINGS[6].r + RINGS[6].w/2;
+    return { right: nd([R, 0]), up: nd([0, R]) };
+  })(),
+  spin: rings.map(r => +r.mesh.rotation.y.toFixed(2)),
   minGap: RINGS.slice(1).reduce((m, c, i) => Math.min(m, (c.r - c.w/2) - (RINGS[i].r + RINGS[i].w/2)), 99),
   errs: window.__errs,
   calls: renderer.info.render.calls, tris: renderer.info.render.triangles,
@@ -238,13 +279,13 @@ window.__fps = 0;
   const s = Math.min(1, Math.max(0, (p - 0.5)/0.5));       /* 后半段 0 → 1 */
   const te = open + FOLD_END * (s*s*(3 - 2*s));            /* smoothstep 叠加余角 */
   window.__te = te;
-  rings.forEach(m => {
-    const c = m.userData;
-    m.scale.setScalar(Math.max(0.001, e));
-    /* 倾角随演出开合：共面 → 扇形 → 合拢 */
-    m.rotation.x = c.tx * te;
-    m.rotation.z = c.tz * te;
-    m.rotation.y = t * c.sp * SPIN;   /* 缓慢进动，速度各异 */
+  rings.forEach(({ mesh, pivot, cfg }) => {
+    mesh.scale.setScalar(Math.max(0.001, e));
+    /* 倾角随演出开合：共面 → 扇形 → 合拢（挂在 pivot 上，不干扰自转） */
+    pivot.rotation.x = cfg.tx * te;
+    pivot.rotation.z = cfg.tz * te;
+    /* 自转：绕环自身对称轴，靠周向明暗带让转动看得见 */
+    mesh.rotation.y = t * cfg.sp * SPIN;
   });
   core.scale.setScalar(Math.max(0.001, e));
   coreLight.intensity = 14 + Math.sin(t*2)*1.2;
