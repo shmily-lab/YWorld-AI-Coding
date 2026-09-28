@@ -254,7 +254,7 @@ const rings = RINGS.map(cfg => {
       envMapIntensity: 1.45, map: ringTex, roughnessMap: ringRough })
   );
   const flip = new THREE.Group();  flip.add(mesh);
-  const axis = new THREE.Group();  axis.rotation.z = cfg.ax;  axis.add(flip);
+  const axis = new THREE.Group();  axis.add(flip);   /* 轴方位 ax 改由 u 调制，合成时归零才共面正对 */
   disc.add(axis);
   mesh.scale.setScalar(0.001);
   return { mesh, flip, axis, cfg };
@@ -413,6 +413,7 @@ window.__fps = 0;
      七环径向区间互不重叠（GAP=0.07），与姿态无关。 */
   rings.forEach(({ mesh, flip, axis, cfg }) => {
     mesh.scale.setScalar(Math.max(0.001, e));
+    axis.rotation.z  = u.value * cfg.ax;   /* 轴方位随合成归零 → 环共面正对镜头 */
     flip.rotation.x  = u.value * cfg.flipAmp  * Math.sin(cfg.w1 * t + cfg.p1);
     axis.rotation.y  = u.value * cfg.driftAmp * Math.sin(cfg.w2 * t + cfg.p2);
     mesh.rotation.y  = u.value * cfg.spinAmp  * Math.sin(cfg.w3 * t + cfg.p3);
