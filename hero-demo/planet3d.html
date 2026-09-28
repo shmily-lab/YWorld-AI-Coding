@@ -94,7 +94,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x05070C);
 
 const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
-camera.position.set(0, 0.9, 17.4);
+camera.position.set(0, 0, 17.4);   /* 完全水平正视，合成后的圆盘是完美正圆 */
 
 /* ── 环境反射：自绘渐变天空（柔和高光带） ────── */
 function makeEnvTexture(){
