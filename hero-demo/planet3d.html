@@ -308,13 +308,15 @@ addEventListener('resize', ()=>{
 const u = { value: 1 };
 let uManual = false;      /* 拖拽接管中 */
 let springing = false;    /* 松手回弹中 */
+let autoDone  = false;    /* 用户一旦接管，自动播放作废（否则松手后会被拽回散开） */
 let sv = 0;               /* 弹簧速度 */
 const AUTO_DELAY = 1.0;   /* 先展示散开姿态 */
 const AUTO_DUR  = 3.0;    /* 合成时长 */
 const easeInOutCubic = p => p < 0.5 ? 4*p*p*p : 1 - Math.pow(-2*p+2, 3)/2;
 
 function autoU(t){
-  if (uManual || springing) return;
+  if (uManual || springing || autoDone) return;
+  if (t >= AUTO_DELAY + AUTO_DUR) { u.value = 0; autoDone = true; return; }
   const p = Math.min(1, Math.max(0, (t - AUTO_DELAY) / AUTO_DUR));
   u.value = 1 - easeInOutCubic(p);
 }
@@ -350,7 +352,7 @@ function renderScrub(){
 }
 let scrubbing = false;
 scrubTrack.addEventListener('pointerdown', e => {
-  scrubbing = true; uManual = true; springing = false;
+  scrubbing = true; uManual = true; springing = false; autoDone = true;
   scrubTrack.setPointerCapture(e.pointerId);
   updateScrub(e);
 });
