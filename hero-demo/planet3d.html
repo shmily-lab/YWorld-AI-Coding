@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>y'world · 地球内部 · 金属七环 (WebGL)</title>
+<title>y'world · 深空观测装置 · 七环合成 (WebGL)</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; overflow: hidden; }
-  body { background: #0A1424; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  body { background: #05070C; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
   canvas { display: block; }
   .ui { position: fixed; z-index: 5; pointer-events: none; }
   .head { left: 4vw; top: 5vh; }
@@ -19,6 +19,22 @@
   .hint b { color: #8FB8DC; font-weight: 400; }
   .fallback { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
               color: #8FB8DC; font: 400 14px/1.8 "Microsoft YaHei", sans-serif; text-align: center; }
+
+  /* 右下角拖拽滑块（近未来仪表感） */
+  .scrub { position: fixed; right: 4vw; bottom: 5vh; z-index: 10; width: 220px;
+           user-select: none; -webkit-user-select: none; touch-action: none; }
+  .scrub .lbl { font: 600 11px/1 Consolas, monospace; color: #6E8FAF; letter-spacing: 3px; margin-bottom: 10px; }
+  .scrub-track { position: relative; height: 18px; cursor: grab; }
+  .scrub-track:active { cursor: grabbing; }
+  .scrub-track .rail { position: absolute; left: 0; right: 0; top: 8px; height: 2px; background: #1C2C42; }
+  .scrub-track .fill { position: absolute; left: 0; top: 8px; height: 2px; width: 100%;
+                       background: #2DE1FF; box-shadow: 0 0 8px rgba(45,225,255,.55); }
+  .scrub-track .tick { position: absolute; top: 5px; width: 1px; height: 8px; background: #33506F; }
+  .scrub-track .knob { position: absolute; top: 2px; left: 100%; width: 15px; height: 15px;
+                       border-radius: 50%; background: #EAF4FB; border: 2px solid #2DE1FF;
+                       transform: translateX(-50%); box-shadow: 0 0 10px rgba(45,225,255,.7); }
+  .scrub .readout { display: flex; justify-content: space-between; margin-top: 8px;
+                    font: 400 10px/1 Consolas, monospace; color: #4E6B88; letter-spacing: 1px; }
 </style>
 <script type="importmap">
 { "imports": {
@@ -29,12 +45,22 @@
 </head>
 <body>
 <div class="ui head">
-  <div class="k">STEP 02 · METAL RINGS · WEBGL</div>
-  <h1>地球内部 · 七层金属环</h1>
-  <div class="sub">扁平戒指环 · LatheGeometry · MSAA 8x · 柔和环境反射</div>
+  <div class="k">STEP 02 · NEAR-FUTURE OBSERVATORY · WEBGL</div>
+  <h1>深空观测 · 七环合成</h1>
+  <div class="sub">蓝白金属环 · 青色波纹核心 · MSAA 8x · 拖拽散开/合成</div>
 </div>
-<div class="ui hint"><b>拖拽旋转</b> · 滚轮缩放 · 开局一个盘 · 七环各转各的，翻转轴与速度都不规则</div>
+<div class="ui hint"><b>拖拽旋转视角</b> · 滚轮缩放 · 右下角滑块：散开 ⇄ 合成圆盘</div>
 <div class="fallback" id="fb">Three.js 加载失败（CDN 不可达）<br>此效果需要 WebGL，或改回 Canvas 方案</div>
+
+<div class="scrub" id="scrub">
+  <div class="lbl">ASSEMBLY · 散开 ⇄ 合成</div>
+  <div class="scrub-track" id="scrubTrack">
+    <div class="rail"></div>
+    <div class="fill" id="scrubFill"></div>
+    <div class="knob" id="scrubKnob"></div>
+  </div>
+  <div class="readout"><span>SCATTER</span><span id="scrubState">ASSEMBLING</span><span>DISC</span></div>
+</div>
 
 <script>
 window.__errs = []; window.onerror = function(m){ window.__errs.push(String(m)); return false; };
@@ -55,7 +81,7 @@ window.__started = true;
    MSAA 必须挂在 composer 的 RenderTarget 上：
    WebGLRenderer 的 antialias 只作用于直接渲染，走后期时完全失效。 */
 const DPR = Math.min(2, devicePixelRatio || 1);
-const SAMPLES = DPR >= 2 ? 4 : 8;          /* 高分屏降一档，保帧率 */
+const SAMPLES = DPR >= 2 ? 4 : 8;
 
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
 renderer.setSize(innerWidth, innerHeight);
@@ -65,22 +91,21 @@ renderer.toneMappingExposure = 1.22;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0A1424);
+scene.background = new THREE.Color(0x05070C);
 
 const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
-camera.position.set(0, 0.9, 17.4);   /* 盘立起来后竖直占 ±6.1，拉远并压低俯视角 */
+camera.position.set(0, 0.9, 17.4);
 
-/* ── 环境反射：自绘渐变天空（柔和高光带，无硬边矩形） ────── */
+/* ── 环境反射：自绘渐变天空（柔和高光带） ────── */
 function makeEnvTexture(){
   const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
   const g = c.getContext('2d');
   const lin = g.createLinearGradient(0, 0, 0, 512);
-  lin.addColorStop(0.00, '#ffffff');   /* 天顶冷白 */
+  lin.addColorStop(0.00, '#ffffff');
   lin.addColorStop(0.35, '#8fb0d2');
   lin.addColorStop(0.55, '#3c6288');
-  lin.addColorStop(1.00, '#0b1a2a');   /* 底部深蓝黑 */
+  lin.addColorStop(1.00, '#0b1a2a');
   g.fillStyle = lin; g.fillRect(0, 0, 1024, 512);
-
   const soft = (cx, cy, r, a) => {
     const rg = g.createRadialGradient(cx, cy, 0, cx, cy, r);
     rg.addColorStop(0, 'rgba(255,255,255,'+a+')');
@@ -88,10 +113,9 @@ function makeEnvTexture(){
     rg.addColorStop(1, 'rgba(210,232,255,0)');
     g.fillStyle = rg; g.fillRect(0, 0, 1024, 512);
   };
-  soft(300, 90,  330, 1.00);   /* 主高光：左上一片柔光 */
-  soft(760, 170, 260, 0.55);   /* 副高光：右侧补一点 */
-  soft(520, 430, 340, 0.18);   /* 底部微微回弹 */
-
+  soft(300, 90,  330, 1.00);
+  soft(760, 170, 260, 0.55);
+  soft(520, 430, 340, 0.18);
   const tex = new THREE.CanvasTexture(c);
   tex.mapping = THREE.EquirectangularReflectionMapping;
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -103,60 +127,73 @@ const envSrc = makeEnvTexture();
 scene.environment = pmrem.fromEquirectangular(envSrc).texture;
 envSrc.dispose(); pmrem.dispose();
 
-/* 灯光：定向光（左上打光）+ 环境 + 核心点光 */
+/* 灯光：定向光（左上）+ 环境 + 青色核心点光 */
 const dir = new THREE.DirectionalLight(0xcfe4ff, 2.0);
 dir.position.set(-4, 6, 5);
 scene.add(dir);
-scene.add(new THREE.AmbientLight(0x2e4060, 0.7));
-const coreLight = new THREE.PointLight(0x9fd0ff, 20, 22);
+scene.add(new THREE.AmbientLight(0x26364e, 0.7));
+const coreLight = new THREE.PointLight(0x2DE1FF, 14, 20);
 scene.add(coreLight);
 
-/* 中央实心核心（收敛的冰蓝白球，不刺眼） */
-const core = new THREE.Mesh(
-  new THREE.SphereGeometry(0.95, 64, 64),
-  new THREE.MeshStandardMaterial({ color: 0xd8ecff, roughness: 0.35, metalness: 0.1,
-    emissive: 0x5588cc, emissiveIntensity: 0.28 })
+/* ── 青色波纹核心（近未来观测装置的中心信号） ──────────────
+   透明发光圆环从中心向外扩散 + 淡出，循环往复；
+   合成定格后仍在微动（唯一持续的光效）。 */
+const RIPPLE_MAX = 1.20;     /* 扩散最大半径（不触及最内环内沿 1.30） */
+const RIPPLES = 4;
+const ripples = [];
+for (let i = 0; i < RIPPLES; i++){
+  const geo = new THREE.RingGeometry(0.94, 1.0, 72);
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0x2DE1FF, transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  scene.add(mesh);
+  ripples.push({ mesh, offset: i / RIPPLES });
+}
+/* 中心微亮点 + 光晕 */
+const coreDot = new THREE.Mesh(
+  new THREE.SphereGeometry(0.22, 32, 32),
+  new THREE.MeshBasicMaterial({ color: 0x2DE1FF })
 );
-scene.add(core);
-
+scene.add(coreDot);
 function glowSprite(size, innerA, midA){
   const c = document.createElement('canvas'); c.width = c.height = 256;
   const g = c.getContext('2d');
   const gr = g.createRadialGradient(128,128,0,128,128,128);
-  gr.addColorStop(0,'rgba(190,225,255,'+innerA+')');
-  gr.addColorStop(0.4,'rgba(120,180,240,'+midA+')');
-  gr.addColorStop(1,'rgba(120,180,240,0)');
+  gr.addColorStop(0,'rgba(80,230,255,'+innerA+')');
+  gr.addColorStop(0.4,'rgba(45,225,255,'+midA+')');
+  gr.addColorStop(1,'rgba(45,225,255,0)');
   g.fillStyle = gr; g.fillRect(0,0,256,256);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c),
     blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
   sp.scale.set(size, size, 1);
   return sp;
 }
-const coreGlow = glowSprite(2.6, 0.55, 0.18);
-scene.add(coreGlow);                         /* 核心柔和光晕（极小，点到为止） */
+const coreGlow = glowSprite(1.6, 0.60, 0.20);
+scene.add(coreGlow);
 
-/* ── 七个金属戒指环 ───────────────────────────────────────
-   倾角收敛为小幅扇形（视觉更稳），并且**径向区间强制不重叠**：
-   任意两环平面都有一条过原点的公共交线，只要径向区间重叠就必然实体相交，
-   所以留间隙 GAP 才是根除穿模的唯一手段。                       */
-const GAP = 0.07;      /* 相邻环径向安全间隙 */
-const W_SCALE = 0.92;  /* 环宽微收，换取间隙，肉眼几乎无感 */
-/* tum   = 翻转角速度（有正有负、快慢各异 → 不规则）
-   drift = 翻转轴在盘面内的漂移速度，轴本身也在慢慢转 → 更像陀螺仪
-   ax    = 翻转轴初始方位；sp = 绕自身轴自转（配角，靠明暗带才看得见）
-   t=0 时三个角度都是 0 ⇒ 开局就是一个完整的共面圆盘，随后各转各的 */
+/* ── 七个金属戒指环（蓝白金属，保留原配色） ────────────────
+   径向区间强制不重叠（GAP=0.07）：任意两环平面都有一条过原点的公共交线，
+   只要径向区间重叠就必然实体相交，留间隙才是根除穿模的唯一手段。 */
+const GAP = 0.07;
+const W_SCALE = 0.92;
+/* 每环一套「有界振荡」参数（sin，避免拖拽时角度绕多圈）：
+   flipAmp  = 翻转幅度（内环大、外环小，散开时各转各的）
+   driftAmp = 翻转轴在盘面内漂移幅度
+   spinAmp  = 绕自身轴自转幅度（靠周向明暗带才看得见）
+   w1/w2/w3 = 各自频率，p1/p2/p3 = 相位；七环各不相同 */
 const RINGS = [
-  { w:0.50, th:0.10, color:0xA9D4EE, tum: 1.90, drift: 0.35, ax:-0.90, sp: 0.42 },
-  { w:0.56, th:0.11, color:0x8FC3E8, tum:-1.60, drift:-0.28, ax:-0.60, sp:-0.36 },
-  { w:0.62, th:0.12, color:0x6FAEDC, tum: 1.35, drift: 0.22, ax:-0.30, sp: 0.30 },
-  { w:0.68, th:0.13, color:0x4E93CE, tum:-1.10, drift:-0.17, ax: 0.00, sp:-0.24 },
-  { w:0.74, th:0.14, color:0x3A7BB8, tum: 0.90, drift: 0.13, ax: 0.30, sp: 0.19 },
-  { w:0.80, th:0.15, color:0x2A64A0, tum:-0.65, drift:-0.09, ax: 0.60, sp:-0.14 },
-  { w:0.86, th:0.16, color:0x1B4C80, tum: 0.50, drift: 0.06, ax: 0.90, sp: 0.10 },
+  { w:0.50, th:0.10, color:0xA9D4EE, ax:-0.90, flipAmp:2.20, driftAmp:0.60, spinAmp:3.2, w1:0.95, w2:0.50, w3:1.6, p1:0.0, p2:0.3, p3:0.0 },
+  { w:0.56, th:0.11, color:0x8FC3E8, ax:-0.60, flipAmp:1.90, driftAmp:0.52, spinAmp:2.8, w1:1.15, w2:0.70, w3:1.9, p1:0.7, p2:1.0, p3:0.5 },
+  { w:0.62, th:0.12, color:0x6FAEDC, ax:-0.30, flipAmp:1.60, driftAmp:0.44, spinAmp:2.4, w1:0.80, w2:0.40, w3:1.3, p1:1.3, p2:1.7, p3:1.0 },
+  { w:0.68, th:0.13, color:0x4E93CE, ax: 0.00, flipAmp:1.35, driftAmp:0.36, spinAmp:2.0, w1:1.30, w2:0.60, w3:2.1, p1:2.0, p2:2.4, p3:1.5 },
+  { w:0.74, th:0.14, color:0x3A7BB8, ax: 0.30, flipAmp:1.05, driftAmp:0.28, spinAmp:1.6, w1:0.70, w2:0.30, w3:1.1, p1:2.6, p2:3.1, p3:2.0 },
+  { w:0.80, th:0.15, color:0x2A64A0, ax: 0.60, flipAmp:0.75, driftAmp:0.20, spinAmp:1.2, w1:1.05, w2:0.50, w3:1.7, p1:3.3, p2:3.8, p3:2.5 },
+  { w:0.86, th:0.16, color:0x1B4C80, ax: 0.90, flipAmp:0.50, driftAmp:0.14, spinAmp:0.8, w1:0.60, w2:0.22, w3:0.9, p1:4.0, p2:4.5, p3:3.0 },
 ];
-/* 自动排布半径：保证 out_i + GAP <= in_{i+1}，从此不可能相交 */
 (function layoutRadii(){
-  let inner = 1.30;                 /* 最内环内沿（核心球半径 0.95，留有余量） */
+  let inner = 1.30;
   RINGS.forEach(c => {
     c.w *= W_SCALE;
     c.r = inner + c.w/2;
@@ -164,7 +201,6 @@ const RINGS = [
   });
 })();
 
-/* 倒角截面：让高光边缘连续，不再碎闪 */
 function ringGeom(r, w, th, seg){
   const c = Math.min(0.02, th*0.22, w*0.12);
   return new THREE.LatheGeometry([
@@ -179,16 +215,13 @@ function ringGeom(r, w, th, seg){
     new THREE.Vector2(r - w/2,       -th/2 + c),
   ], seg);
 }
-const SEG = 320;                    /* 大半径环也不出多边形棱 */
-const SPIN = 1.20;                  /* 自转速度系数（绕环自身轴，靠周向纹理才看得见；配角） */
+const SEG = 320;
 
-/* 周向明暗贴图：圆环绕自身轴旋转是对称的、看不出在转，
-   所以给环面加几条柔和的明暗带，自转时这些带子绕圈跑，运动才看得见。 */
 const MAXANISO = renderer.capabilities.getMaxAnisotropy();
 function bandTexture(kind){
   const c = document.createElement('canvas'); c.width = 1024; c.height = 8;
   const g = c.getContext('2d');
-  g.fillStyle = '#ffffff'; g.fillRect(0, 0, 1024, 8);          /* 底色：保持环本色 */
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, 1024, 8);
   const band = (x, w, col) => {
     const lg = g.createLinearGradient(x - w, 0, x + w, 0);
     lg.addColorStop(0, 'rgba(255,255,255,0)');
@@ -198,10 +231,10 @@ function bandTexture(kind){
   };
   const BANDS = [[300, 110, 0.55], [700, 60, 0.35], [880, 36, 0.25]];
   BANDS.forEach(([x, w, a]) => band(x, w,
-    kind === 'rough' ? 'rgba(85,85,85,'+Math.min(0.95, a*1.7)+')'   /* 带区更光滑 → 反射出亮弧 */
-                     : 'rgba(110,155,195,'+Math.min(0.8, a*1.4)+')')); /* 带区压暗 → 明暗节奏 */
+    kind === 'rough' ? 'rgba(85,85,85,'+Math.min(0.95, a*1.7)+')'
+                     : 'rgba(110,155,195,'+Math.min(0.8, a*1.4)+')'));
   const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = THREE.RepeatWrapping;      /* 周向无缝 */
+  tex.wrapS = THREE.RepeatWrapping;
   if (kind !== 'rough') tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = MAXANISO;
   return tex;
@@ -209,7 +242,7 @@ function bandTexture(kind){
 const ringTex = bandTexture('map');
 const ringRough = bandTexture('rough');
 
-/* 盘基准：把环从水平(XZ)立起来成竖直(XY)，正对镜头才"看得出是个盘" */
+/* 盘基准：把环从水平(XZ)立起来成竖直(XY)，正对镜头 */
 const disc = new THREE.Group();
 disc.rotation.x = Math.PI/2;
 scene.add(disc);
@@ -220,8 +253,6 @@ const rings = RINGS.map(cfg => {
     new THREE.MeshStandardMaterial({ color: cfg.color, metalness: 0.90, roughness: 0.30,
       envMapIntensity: 1.45, map: ringTex, roughnessMap: ringRough })
   );
-  /* 三层结构：axis(翻转轴方位) → flip(从上往下翻) → mesh(绕自身轴自转)
-     这样翻转轴可以各不相同，而自转永远绕环自己的轴 */
   const flip = new THREE.Group();  flip.add(mesh);
   const axis = new THREE.Group();  axis.rotation.z = cfg.ax;  axis.add(flip);
   disc.add(axis);
@@ -229,7 +260,25 @@ const rings = RINGS.map(cfg => {
   return { mesh, flip, axis, cfg };
 });
 
-/* ── 后期：MSAA RenderTarget + 收敛的辉光 + 正确的输出链 ── */
+/* ── 镜头仪表刻度环（最外圈，强化观测装置意象） ────────── */
+(function makeDial(){
+  const outerR = RINGS[6].r + RINGS[6].w/2;
+  const pts = [];
+  const N = 72;
+  for (let i = 0; i < N; i++){
+    const a = i/N * Math.PI*2;
+    const long = (i % 6 === 0);
+    const r0 = outerR + 0.06;
+    const r1 = outerR + (long ? 0.22 : 0.13);
+    pts.push(r0*Math.cos(a), r0*Math.sin(a), 0, r1*Math.cos(a), r1*Math.sin(a), 0);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  const mat = new THREE.LineBasicMaterial({ color: 0x3E5C80, transparent: true, opacity: 0.55 });
+  scene.add(new THREE.LineSegments(geo, mat));
+})();
+
+/* ── 后期：MSAA RenderTarget + 辉光 + 正确输出链 ── */
 const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, {
   type: THREE.HalfFloatType,
   samples: SAMPLES,
@@ -239,7 +288,7 @@ composer.setPixelRatio(DPR);
 composer.setSize(innerWidth, innerHeight);
 composer.addPass(new RenderPass(scene, camera));
 composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.26, 0.60, 0.80));
-composer.addPass(new OutputPass());   /* ACES + sRGB 走完整链路 */
+composer.addPass(new OutputPass());
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0);
@@ -252,16 +301,82 @@ addEventListener('resize', ()=>{
   composer.setSize(innerWidth, innerHeight);
 });
 
+/* ── 散开度 u 与交互状态机 ────────────────────────────────
+   u=1 完全散开（各环不规则翻转），u=0 合成共面圆盘。
+   默认：自动播放一次 1→0 后定格；
+   拖拽滑块：接管并 scrub u；松手：弹簧回弹到 u=0（合成圆盘）。 */
+const u = { value: 1 };
+let uManual = false;      /* 拖拽接管中 */
+let springing = false;    /* 松手回弹中 */
+let sv = 0;               /* 弹簧速度 */
+const AUTO_DELAY = 1.0;   /* 先展示散开姿态 */
+const AUTO_DUR  = 3.0;    /* 合成时长 */
+const easeInOutCubic = p => p < 0.5 ? 4*p*p*p : 1 - Math.pow(-2*p+2, 3)/2;
+
+function autoU(t){
+  if (uManual || springing) return;
+  const p = Math.min(1, Math.max(0, (t - AUTO_DELAY) / AUTO_DUR));
+  u.value = 1 - easeInOutCubic(p);
+}
+function updateSpring(dt){
+  if (!springing) return;
+  const target = 0, k = 80, damp = 14;
+  sv += (k*(target - u.value) - damp*sv) * dt;
+  u.value += sv * dt;
+  if (Math.abs(u.value) < 0.001 && Math.abs(sv) < 0.01){
+    u.value = 0; sv = 0; springing = false;
+  }
+}
+
+/* ── 右下角拖拽滑块 ── */
+const scrubTrack = document.getElementById('scrubTrack');
+const scrubKnob  = document.getElementById('scrubKnob');
+const scrubFill  = document.getElementById('scrubFill');
+const scrubState = document.getElementById('scrubState');
+(function buildTicks(){
+  const track = document.getElementById('scrubTrack');
+  for (let i = 0; i <= 8; i++){
+    const t = document.createElement('div');
+    t.className = 'tick';
+    t.style.left = (i/8*100) + '%';
+    track.appendChild(t);
+  }
+})();
+function renderScrub(){
+  const p = 1 - u.value;   /* u=0(合成)→p=1，fill 拉满 */
+  scrubKnob.style.left = (p*100) + '%';
+  scrubFill.style.width = (p*100) + '%';
+  scrubState.textContent = u.value > 0.55 ? 'SCATTER' : (u.value > 0.03 ? 'ASSEMBLING' : 'LOCKED');
+}
+let scrubbing = false;
+scrubTrack.addEventListener('pointerdown', e => {
+  scrubbing = true; uManual = true; springing = false;
+  scrubTrack.setPointerCapture(e.pointerId);
+  updateScrub(e);
+});
+scrubTrack.addEventListener('pointermove', e => { if (scrubbing) updateScrub(e); });
+scrubTrack.addEventListener('pointerup', e => {
+  if (!scrubbing) return;
+  scrubbing = false; uManual = false; springing = true; sv = 0;
+});
+scrubTrack.addEventListener('pointercancel', () => {
+  scrubbing = false; uManual = false; springing = true; sv = 0;
+});
+function updateScrub(e){
+  const rect = scrubTrack.getBoundingClientRect();
+  const p = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+  u.value = 1 - p;   /* 左端散开(1)，右端合成(0) */
+}
+
 /* 自检钩子（不参与渲染） */
 window.__diag = () => ({
   dpr: DPR, samples: SAMPLES,
   rtSamples: composer.renderTarget1.samples,
   bands: RINGS.map(c => [ +(c.r - c.w/2).toFixed(3), +(c.r + c.w/2).toFixed(3) ]),
   t: +clock.getElapsedTime().toFixed(2),
+  u: +u.value.toFixed(3),
   flip: rings.map(r => +r.flip.rotation.x.toFixed(2)),
   drift: rings.map(r => +r.axis.rotation.y.toFixed(2)),
-  /* 穿模硬证据：把每个环所有顶点变换到世界坐标，量出它们到圆心的距离区间。
-     只要相邻两环的区间不相交，两个实体就绝不可能有公共点（与姿态无关）。 */
   radial: (() => {
     const v = new THREE.Vector3();
     return rings.map(({ mesh }) => {
@@ -275,12 +390,6 @@ window.__diag = () => ({
       return [ +mn.toFixed(3), +mx.toFixed(3) ];
     });
   })(),
-  /* 外环最外两点投影到 NDC，|值|<1 表示完整在画面内 */
-  fit: (() => {
-    const nd = v => { const q = new THREE.Vector3(v[0], 0, v[1]); rings[6].mesh.localToWorld(q); q.project(camera); return [ +q.x.toFixed(2), +q.y.toFixed(2) ]; };
-    const R = RINGS[6].r + RINGS[6].w/2;
-    return { right: nd([R, 0]), up: nd([0, R]) };
-  })(),
   spin: rings.map(r => +r.mesh.rotation.y.toFixed(2)),
   minGap: RINGS.slice(1).reduce((m, c, i) => Math.min(m, (c.r - c.w/2) - (RINGS[i].r + RINGS[i].w/2)), 99),
   errs: window.__errs,
@@ -288,24 +397,38 @@ window.__diag = () => ({
 });
 
 const clock = new THREE.Clock();
-let frames = 0, t0 = performance.now();
+let lastT = 0, frames = 0, t0 = performance.now();
 window.__fps = 0;
 (function animate(){
   requestAnimationFrame(animate);
   const t = clock.getElapsedTime();
+  const dt = Math.min(0.05, t - lastT); lastT = t;
+
+  autoU(t);
+  updateSpring(dt);
+
   const born = Math.min(1, t/1.6), e = 1 - Math.pow(1-born, 3);
-  /* 陀螺仪式不规则旋转：翻转速度有正有负、快慢各异，翻转轴还在盘面内缓慢漂移。
-     不穿模是结构性保证的——环上任一点到圆心的距离恒在自己的径向区间内，
-     而七环的径向区间互不重叠（GAP=0.07），这个判据与姿态无关，怎么转都不会相交。
-     t=0 时所有角度为 0 ⇒ 开局是完整共面圆盘。 */
+  /* 散开度 u 调制有界振荡：u=1 各转各的，u=0 全部归零 → 合成共面圆盘。
+     不穿模是结构性保证的：环上任一点到圆心距离恒在自己径向区间内，
+     七环径向区间互不重叠（GAP=0.07），与姿态无关。 */
   rings.forEach(({ mesh, flip, axis, cfg }) => {
     mesh.scale.setScalar(Math.max(0.001, e));
-    flip.rotation.x = cfg.tum * t;        /* 绕盘面内的一条轴翻转（从上往下） */
-    axis.rotation.y = cfg.drift * t;      /* 翻转轴本身缓慢漂移 → 不规则 */
-    mesh.rotation.y = t * cfg.sp * SPIN;  /* 绕自身轴自转，明暗带扫过 */
+    flip.rotation.x  = u.value * cfg.flipAmp  * Math.sin(cfg.w1 * t + cfg.p1);
+    axis.rotation.y  = u.value * cfg.driftAmp * Math.sin(cfg.w2 * t + cfg.p2);
+    mesh.rotation.y  = u.value * cfg.spinAmp  * Math.sin(cfg.w3 * t + cfg.p3);
   });
-  core.scale.setScalar(Math.max(0.001, e));
-  coreLight.intensity = 14 + Math.sin(t*2)*1.2;
+
+  /* 青色波纹扩散（合成定格后仍在微动） */
+  ripples.forEach(rp => {
+    const ph = (t*0.5 + rp.offset) % 1;
+    const r = ph * RIPPLE_MAX;
+    rp.mesh.scale.setScalar(Math.max(0.001, r));
+    rp.mesh.material.opacity = Math.max(0, 1 - ph) * 0.7;
+  });
+  coreDot.scale.setScalar(Math.max(0.001, e));
+  coreLight.intensity = 12 + Math.sin(t*2)*1.5;
+
+  renderScrub();
   controls.update();
   composer.render();
   frames++;

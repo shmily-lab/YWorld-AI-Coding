@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>y'world · 地球内部 · 金属七环 (WebGL)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body { background: #0A1424; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  canvas { display: block; }
+  .ui { position: fixed; z-index: 5; pointer-events: none; }
+  .head { left: 4vw; top: 5vh; }
+  .head .k { font: 600 12px/1 Consolas, monospace; color: #8FD0F0; letter-spacing: 3px; }
+  .head h1 { font-size: clamp(22px, 2.8vw, 34px); font-weight: 600; color: #EAF4FB; margin: 10px 0 6px; letter-spacing: 1px; }
+  .head .sub { font: 400 12px/1.6 Consolas, "Microsoft YaHei", monospace; color: #5E7E9C; letter-spacing: 1px; }
+  .hint { left: 50%; bottom: 4vh; transform: translateX(-50%);
+          font: 400 12px/1 Consolas, "Microsoft YaHei", monospace; color: #4E6B88; letter-spacing: 2px; }
+  .hint b { color: #8FB8DC; font-weight: 400; }
+  .fallback { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+              color: #8FB8DC; font: 400 14px/1.8 "Microsoft YaHei", sans-serif; text-align: center; }
+</style>
+<script type="importmap">
+{ "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div class="ui head">
+  <div class="k">STEP 02 · METAL RINGS · WEBGL</div>
+  <h1>地球内部 · 七层金属环</h1>
+  <div class="sub">扁平戒指环 · LatheGeometry · MSAA 8x · 柔和环境反射</div>
+</div>
+<div class="ui hint"><b>拖拽旋转</b> · 滚轮缩放 · 开局一个盘 · 七环各转各的，翻转轴与速度都不规则</div>
+<div class="fallback" id="fb">Three.js 加载失败（CDN 不可达）<br>此效果需要 WebGL，或改回 Canvas 方案</div>
+
+<script>
+window.__errs = []; window.onerror = function(m){ window.__errs.push(String(m)); return false; };
+setTimeout(()=>{ if (!window.__started) document.getElementById('fb').style.display = 'flex'; }, 6000);
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+window.__started = true;
+
+/* ── 画质档位 ──────────────────────────────────────────────
+   MSAA 必须挂在 composer 的 RenderTarget 上：
+   WebGLRenderer 的 antialias 只作用于直接渲染，走后期时完全失效。 */
+const DPR = Math.min(2, devicePixelRatio || 1);
+const SAMPLES = DPR >= 2 ? 4 : 8;          /* 高分屏降一档，保帧率 */
+
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(DPR);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.22;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0A1424);
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(0, 0.9, 17.4);   /* 盘立起来后竖直占 ±6.1，拉远并压低俯视角 */
+
+/* ── 环境反射：自绘渐变天空（柔和高光带，无硬边矩形） ────── */
+function makeEnvTexture(){
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
+  const g = c.getContext('2d');
+  const lin = g.createLinearGradient(0, 0, 0, 512);
+  lin.addColorStop(0.00, '#ffffff');   /* 天顶冷白 */
+  lin.addColorStop(0.35, '#8fb0d2');
+  lin.addColorStop(0.55, '#3c6288');
+  lin.addColorStop(1.00, '#0b1a2a');   /* 底部深蓝黑 */
+  g.fillStyle = lin; g.fillRect(0, 0, 1024, 512);
+
+  const soft = (cx, cy, r, a) => {
+    const rg = g.createRadialGradient(cx, cy, 0, cx, cy, r);
+    rg.addColorStop(0, 'rgba(255,255,255,'+a+')');
+    rg.addColorStop(0.5, 'rgba(210,232,255,'+(a*0.35)+')');
+    rg.addColorStop(1, 'rgba(210,232,255,0)');
+    g.fillStyle = rg; g.fillRect(0, 0, 1024, 512);
+  };
+  soft(300, 90,  330, 1.00);   /* 主高光：左上一片柔光 */
+  soft(760, 170, 260, 0.55);   /* 副高光：右侧补一点 */
+  soft(520, 430, 340, 0.18);   /* 底部微微回弹 */
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+const pmrem = new THREE.PMREMGenerator(renderer);
+pmrem.compileEquirectangularShader();
+const envSrc = makeEnvTexture();
+scene.environment = pmrem.fromEquirectangular(envSrc).texture;
+envSrc.dispose(); pmrem.dispose();
+
+/* 灯光：定向光（左上打光）+ 环境 + 核心点光 */
+const dir = new THREE.DirectionalLight(0xcfe4ff, 2.0);
+dir.position.set(-4, 6, 5);
+scene.add(dir);
+scene.add(new THREE.AmbientLight(0x2e4060, 0.7));
+const coreLight = new THREE.PointLight(0x9fd0ff, 20, 22);
+scene.add(coreLight);
+
+/* 中央实心核心（收敛的冰蓝白球，不刺眼） */
+const core = new THREE.Mesh(
+  new THREE.SphereGeometry(0.95, 64, 64),
+  new THREE.MeshStandardMaterial({ color: 0xd8ecff, roughness: 0.35, metalness: 0.1,
+    emissive: 0x5588cc, emissiveIntensity: 0.28 })
+);
+scene.add(core);
+
+function glowSprite(size, innerA, midA){
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(128,128,0,128,128,128);
+  gr.addColorStop(0,'rgba(190,225,255,'+innerA+')');
+  gr.addColorStop(0.4,'rgba(120,180,240,'+midA+')');
+  gr.addColorStop(1,'rgba(120,180,240,0)');
+  g.fillStyle = gr; g.fillRect(0,0,256,256);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c),
+    blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+  sp.scale.set(size, size, 1);
+  return sp;
+}
+const coreGlow = glowSprite(2.6, 0.55, 0.18);
+scene.add(coreGlow);                         /* 核心柔和光晕（极小，点到为止） */
+
+/* ── 七个金属戒指环 ───────────────────────────────────────
+   倾角收敛为小幅扇形（视觉更稳），并且**径向区间强制不重叠**：
+   任意两环平面都有一条过原点的公共交线，只要径向区间重叠就必然实体相交，
+   所以留间隙 GAP 才是根除穿模的唯一手段。                       */
+const GAP = 0.07;      /* 相邻环径向安全间隙 */
+const W_SCALE = 0.92;  /* 环宽微收，换取间隙，肉眼几乎无感 */
+/* tum   = 翻转角速度（有正有负、快慢各异 → 不规则）
+   drift = 翻转轴在盘面内的漂移速度，轴本身也在慢慢转 → 更像陀螺仪
+   ax    = 翻转轴初始方位；sp = 绕自身轴自转（配角，靠明暗带才看得见）
+   t=0 时三个角度都是 0 ⇒ 开局就是一个完整的共面圆盘，随后各转各的 */
+const RINGS = [
+  { w:0.50, th:0.10, color:0xA9D4EE, tum: 1.90, drift: 0.35, ax:-0.90, sp: 0.42 },
+  { w:0.56, th:0.11, color:0x8FC3E8, tum:-1.60, drift:-0.28, ax:-0.60, sp:-0.36 },
+  { w:0.62, th:0.12, color:0x6FAEDC, tum: 1.35, drift: 0.22, ax:-0.30, sp: 0.30 },
+  { w:0.68, th:0.13, color:0x4E93CE, tum:-1.10, drift:-0.17, ax: 0.00, sp:-0.24 },
+  { w:0.74, th:0.14, color:0x3A7BB8, tum: 0.90, drift: 0.13, ax: 0.30, sp: 0.19 },
+  { w:0.80, th:0.15, color:0x2A64A0, tum:-0.65, drift:-0.09, ax: 0.60, sp:-0.14 },
+  { w:0.86, th:0.16, color:0x1B4C80, tum: 0.50, drift: 0.06, ax: 0.90, sp: 0.10 },
+];
+/* 自动排布半径：保证 out_i + GAP <= in_{i+1}，从此不可能相交 */
+(function layoutRadii(){
+  let inner = 1.30;                 /* 最内环内沿（核心球半径 0.95，留有余量） */
+  RINGS.forEach(c => {
+    c.w *= W_SCALE;
+    c.r = inner + c.w/2;
+    inner = inner + c.w + GAP;
+  });
+})();
+
+/* 倒角截面：让高光边缘连续，不再碎闪 */
+function ringGeom(r, w, th, seg){
+  const c = Math.min(0.02, th*0.22, w*0.12);
+  return new THREE.LatheGeometry([
+    new THREE.Vector2(r - w/2,       -th/2 + c),
+    new THREE.Vector2(r - w/2,        th/2 - c),
+    new THREE.Vector2(r - w/2 + c,    th/2),
+    new THREE.Vector2(r + w/2 - c,    th/2),
+    new THREE.Vector2(r + w/2,        th/2 - c),
+    new THREE.Vector2(r + w/2,       -th/2 + c),
+    new THREE.Vector2(r + w/2 - c,   -th/2),
+    new THREE.Vector2(r - w/2 + c,   -th/2),
+    new THREE.Vector2(r - w/2,       -th/2 + c),
+  ], seg);
+}
+const SEG = 320;                    /* 大半径环也不出多边形棱 */
+const SPIN = 1.20;                  /* 自转速度系数（绕环自身轴，靠周向纹理才看得见；配角） */
+
+/* 周向明暗贴图：圆环绕自身轴旋转是对称的、看不出在转，
+   所以给环面加几条柔和的明暗带，自转时这些带子绕圈跑，运动才看得见。 */
+const MAXANISO = renderer.capabilities.getMaxAnisotropy();
+function bandTexture(kind){
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 8;
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, 1024, 8);          /* 底色：保持环本色 */
+  const band = (x, w, col) => {
+    const lg = g.createLinearGradient(x - w, 0, x + w, 0);
+    lg.addColorStop(0, 'rgba(255,255,255,0)');
+    lg.addColorStop(0.5, col);
+    lg.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = lg; g.fillRect(x - w, 0, 2*w, 8);
+  };
+  const BANDS = [[300, 110, 0.55], [700, 60, 0.35], [880, 36, 0.25]];
+  BANDS.forEach(([x, w, a]) => band(x, w,
+    kind === 'rough' ? 'rgba(85,85,85,'+Math.min(0.95, a*1.7)+')'   /* 带区更光滑 → 反射出亮弧 */
+                     : 'rgba(110,155,195,'+Math.min(0.8, a*1.4)+')')); /* 带区压暗 → 明暗节奏 */
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;      /* 周向无缝 */
+  if (kind !== 'rough') tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = MAXANISO;
+  return tex;
+}
+const ringTex = bandTexture('map');
+const ringRough = bandTexture('rough');
+
+/* 盘基准：把环从水平(XZ)立起来成竖直(XY)，正对镜头才"看得出是个盘" */
+const disc = new THREE.Group();
+disc.rotation.x = Math.PI/2;
+scene.add(disc);
+
+const rings = RINGS.map(cfg => {
+  const mesh = new THREE.Mesh(
+    ringGeom(cfg.r, cfg.w, cfg.th, SEG),
+    new THREE.MeshStandardMaterial({ color: cfg.color, metalness: 0.90, roughness: 0.30,
+      envMapIntensity: 1.45, map: ringTex, roughnessMap: ringRough })
+  );
+  /* 三层结构：axis(翻转轴方位) → flip(从上往下翻) → mesh(绕自身轴自转)
+     这样翻转轴可以各不相同，而自转永远绕环自己的轴 */
+  const flip = new THREE.Group();  flip.add(mesh);
+  const axis = new THREE.Group();  axis.rotation.z = cfg.ax;  axis.add(flip);
+  disc.add(axis);
+  mesh.scale.setScalar(0.001);
+  return { mesh, flip, axis, cfg };
+});
+
+/* ── 后期：MSAA RenderTarget + 收敛的辉光 + 正确的输出链 ── */
+const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, {
+  type: THREE.HalfFloatType,
+  samples: SAMPLES,
+});
+const composer = new EffectComposer(renderer, rt);
+composer.setPixelRatio(DPR);
+composer.setSize(innerWidth, innerHeight);
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.26, 0.60, 0.80));
+composer.addPass(new OutputPass());   /* ACES + sRGB 走完整链路 */
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0, 0);
+controls.enableDamping = true; controls.enablePan = false;
+controls.minDistance = 9; controls.maxDistance = 30;
+
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+});
+
+/* 自检钩子（不参与渲染） */
+window.__diag = () => ({
+  dpr: DPR, samples: SAMPLES,
+  rtSamples: composer.renderTarget1.samples,
+  bands: RINGS.map(c => [ +(c.r - c.w/2).toFixed(3), +(c.r + c.w/2).toFixed(3) ]),
+  t: +clock.getElapsedTime().toFixed(2),
+  flip: rings.map(r => +r.flip.rotation.x.toFixed(2)),
+  drift: rings.map(r => +r.axis.rotation.y.toFixed(2)),
+  /* 穿模硬证据：把每个环所有顶点变换到世界坐标，量出它们到圆心的距离区间。
+     只要相邻两环的区间不相交，两个实体就绝不可能有公共点（与姿态无关）。 */
+  radial: (() => {
+    const v = new THREE.Vector3();
+    return rings.map(({ mesh }) => {
+      mesh.updateWorldMatrix(true, false);
+      const pos = mesh.geometry.attributes.position;
+      let mn = Infinity, mx = -Infinity;
+      for (let i = 0; i < pos.count; i++){
+        const d = v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld).length();
+        if (d < mn) mn = d; if (d > mx) mx = d;
+      }
+      return [ +mn.toFixed(3), +mx.toFixed(3) ];
+    });
+  })(),
+  /* 外环最外两点投影到 NDC，|值|<1 表示完整在画面内 */
+  fit: (() => {
+    const nd = v => { const q = new THREE.Vector3(v[0], 0, v[1]); rings[6].mesh.localToWorld(q); q.project(camera); return [ +q.x.toFixed(2), +q.y.toFixed(2) ]; };
+    const R = RINGS[6].r + RINGS[6].w/2;
+    return { right: nd([R, 0]), up: nd([0, R]) };
+  })(),
+  spin: rings.map(r => +r.mesh.rotation.y.toFixed(2)),
+  minGap: RINGS.slice(1).reduce((m, c, i) => Math.min(m, (c.r - c.w/2) - (RINGS[i].r + RINGS[i].w/2)), 99),
+  errs: window.__errs,
+  calls: renderer.info.render.calls, tris: renderer.info.render.triangles,
+});
+
+const clock = new THREE.Clock();
+let frames = 0, t0 = performance.now();
+window.__fps = 0;
+(function animate(){
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+  const born = Math.min(1, t/1.6), e = 1 - Math.pow(1-born, 3);
+  /* 陀螺仪式不规则旋转：翻转速度有正有负、快慢各异，翻转轴还在盘面内缓慢漂移。
+     不穿模是结构性保证的——环上任一点到圆心的距离恒在自己的径向区间内，
+     而七环的径向区间互不重叠（GAP=0.07），这个判据与姿态无关，怎么转都不会相交。
+     t=0 时所有角度为 0 ⇒ 开局是完整共面圆盘。 */
+  rings.forEach(({ mesh, flip, axis, cfg }) => {
+    mesh.scale.setScalar(Math.max(0.001, e));
+    flip.rotation.x = cfg.tum * t;        /* 绕盘面内的一条轴翻转（从上往下） */
+    axis.rotation.y = cfg.drift * t;      /* 翻转轴本身缓慢漂移 → 不规则 */
+    mesh.rotation.y = t * cfg.sp * SPIN;  /* 绕自身轴自转，明暗带扫过 */
+  });
+  core.scale.setScalar(Math.max(0.001, e));
+  coreLight.intensity = 14 + Math.sin(t*2)*1.2;
+  controls.update();
+  composer.render();
+  frames++;
+  if (performance.now() - t0 > 1000){ window.__fps = Math.round(frames * 1000 / (performance.now() - t0)); frames = 0; t0 = performance.now(); }
+})();
+</script>
+</body>
+</html>
