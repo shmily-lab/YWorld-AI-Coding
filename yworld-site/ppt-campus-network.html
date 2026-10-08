@@ -3,169 +3,798 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>园区网建设项目（真机实施版） · 项目展示</title>
+<title>实训楼园区网络 · 真机实施版 · 项目展示</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; overflow: hidden; }
-  body { font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif; background: #05080b; color: #d8efe6; }
+  :root{
+    --bg-base:#05080b; --bg-surface:#0a1214; --bg-elevated:#0e1a1c;
+    --brand:#35e0b0; --brand-soft:#a8ecd6; --lime:#a8f55a; --amber:#ffb347;
+    --deny:#ff5d73;
+    --text-hi:#f2fffa; --text-mid:rgba(196,232,220,.80); --text-lo:rgba(168,210,200,.52);
+    --line:rgba(53,224,176,.14); --line-strong:rgba(53,224,176,.32);
+    --font-display:"Inter Tight","Noto Sans SC",system-ui,sans-serif;
+    --font-mono:"JetBrains Mono",ui-monospace,monospace;
+    --font-cn:"Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
+    --pad:clamp(22px,9vw,140px);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--font-cn); background:var(--bg-base); color:var(--text-mid);
+    overflow-x:hidden; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
 
-  .topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 20; display: flex; justify-content: space-between;
-            align-items: center; padding: 18px 34px; }
-  .topbar .back { color: rgba(53, 224, 176, 0.85); text-decoration: none; font-size: 13px; letter-spacing: 2px;
-                  border: 1px solid rgba(53, 224, 176, 0.3); padding: 8px 16px; border-radius: 999px;
-                  transition: all 0.25s ease; background: rgba(8, 18, 15, 0.6); }
-  .topbar .back:hover { background: rgba(53, 224, 176, 0.12); border-color: rgba(53, 224, 176, 0.6); }
-  .topbar .mark { font-size: 13px; letter-spacing: 3px; color: rgba(170, 220, 205, 0.5); }
-  .topbar .mark b { color: #eafff6; }
-  .topbar .mark i { color: #ffb347; font-style: normal; }
+  /* ---------- fixed background: Y'World 动态渐变 (后续页面背景) ---------- */
+  .bg-gradient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+    background:linear-gradient(160deg,#05080b 0%,#071210 55%,#060e0d 100%);
+    opacity:.85;transition:opacity .9s ease}
+  body.hero-active .bg-gradient{opacity:0}
+  .blob{position:absolute;border-radius:50%;filter:blur(80px);mix-blend-mode:screen}
+  .blob.b1{width:62vmax;height:62vmax;left:-12vmax;top:-18vmax;
+    background:radial-gradient(circle at 50% 50%,rgba(53,224,176,.20),transparent 62%);
+    animation:drift1 26s ease-in-out infinite}
+  .blob.b2{width:52vmax;height:52vmax;right:-14vmax;top:8vmax;
+    background:radial-gradient(circle at 50% 50%,rgba(255,179,71,.14),transparent 62%);
+    animation:drift2 32s ease-in-out infinite}
+  .blob.b3{width:48vmax;height:48vmax;left:16vmax;bottom:-22vmax;
+    background:radial-gradient(circle at 50% 50%,rgba(168,245,90,.12),transparent 60%);
+    animation:drift3 30s ease-in-out infinite}
+  .blob.b4{width:40vmax;height:40vmax;right:4vmax;bottom:-10vmax;
+    background:radial-gradient(circle at 50% 50%,rgba(53,224,176,.10),transparent 60%);
+    animation:drift4 36s ease-in-out infinite}
+  @keyframes drift1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(8vmax,6vmax) scale(1.12)}}
+  @keyframes drift2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-7vmax,4vmax) scale(1.15)}}
+  @keyframes drift3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(5vmax,-6vmax) scale(1.1)}}
+  @keyframes drift4{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-6vmax,-5vmax) scale(1.18)}}
 
-  /* ---------- 幻灯片 ---------- */
-  .deck { position: absolute; inset: 0; }
-  .slide { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center;
-           padding: 90px 11vw; opacity: 0; transform: scale(0.985) translateY(10px);
-           transition: opacity 0.55s ease, transform 0.55s ease; pointer-events: none; }
-  .slide.active { opacity: 1; transform: none; pointer-events: all; }
+  /* ---------- fixed background: 网格 ---------- */
+  .bgline{position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),
+                     linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:60px 60px; mask-image:radial-gradient(ellipse 80% 70% at 50% 30%,#000 40%,transparent 100%);
+    opacity:.5;}
 
-  .slide .eyebrow { font-size: 12px; letter-spacing: 6px; color: #35e0b0; text-transform: uppercase; margin-bottom: 22px; }
-  .slide h1 { font-size: clamp(34px, 5.2vw, 64px); font-weight: 800; line-height: 1.22; color: #f2fffa; }
-  .slide h1 .thin { font-weight: 300; color: rgba(220, 245, 235, 0.75); }
-  .slide h2 { font-size: clamp(24px, 3vw, 38px); font-weight: 700; color: #f2fffa; margin-bottom: 34px; }
-  .slide .sub { margin-top: 24px; font-size: clamp(14px, 1.4vw, 18px); line-height: 1.9; color: rgba(195, 230, 218, 0.75); max-width: 720px; }
-  .slide .rule { width: 72px; height: 3px; background: linear-gradient(90deg, #35e0b0, #ffb347); border-radius: 2px; margin: 30px 0; }
+  /* ---------- text-dispersion background (仅第一页) ---------- */
+  #tf{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity .7s ease}
+  body.hero-active #tf{opacity:1}
+  .horizon{position:fixed;left:0;right:0;bottom:0;height:42vh;z-index:0;pointer-events:none;
+    background:radial-gradient(120% 100% at 50% 100%,rgba(53,224,176,.16),transparent 70%);
+    opacity:0;transition:opacity .8s ease;animation:horizonPulse 7s ease-in-out infinite}
+  @keyframes horizonPulse{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.12)}}
+  body.hero-active .horizon{opacity:.9}
 
-  .chips { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
-  .chip { font-size: 13px; padding: 9px 18px; border-radius: 999px; letter-spacing: 1px;
-          border: 1px solid rgba(53, 224, 176, 0.35); background: rgba(12, 26, 22, 0.55); color: #a8ecd6; }
-  .chip.amber { border-color: rgba(255, 179, 71, 0.4); color: #ffd9a3; }
+  /* ---------- scroll progress ---------- */
+  .progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:40;
+    background:linear-gradient(90deg,var(--brand),var(--lime));box-shadow:0 0 12px rgba(53,224,176,.7)}
 
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 40px; max-width: 980px; }
-  .item { border-left: 2px solid rgba(53, 224, 176, 0.55); padding: 4px 0 4px 18px; }
-  .item b { display: block; font-size: 15px; color: #eafff6; margin-bottom: 5px; letter-spacing: 0.5px; }
-  .item span { font-size: 13px; line-height: 1.7; color: rgba(190, 226, 213, 0.68); }
+  /* ---------- topbar ---------- */
+  .topbar{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;justify-content:space-between;
+    align-items:center;padding:18px clamp(20px,5vw,46px);transition:all .3s ease}
+  .topbar.scrolled{background:rgba(5,8,11,.72);backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);padding-top:14px;padding-bottom:14px}
+  .back{color:rgba(53,224,176,.9);text-decoration:none;font-size:13px;letter-spacing:2px;
+    border:1px solid rgba(53,224,176,.3);padding:8px 16px;border-radius:999px;
+    transition:all .25s ease;background:rgba(8,18,15,.5);font-family:var(--font-mono)}
+  .back:hover{background:rgba(53,224,176,.14);border-color:rgba(53,224,176,.6);color:#eafff6}
+  .mark{font-size:13px;letter-spacing:3px;color:rgba(170,220,205,.55);font-family:var(--font-mono)}
+  .mark b{color:#eafff6;font-weight:700}
+  .mark i{color:var(--amber);font-style:normal}
 
-  /* 占位页 */
-  .ghost { position: relative; }
-  .ghost .big { font-size: clamp(60px, 12vw, 170px); font-weight: 800; letter-spacing: 8px;
-                color: transparent; -webkit-text-stroke: 1px rgba(53, 224, 176, 0.22); line-height: 1; user-select: none; }
-  .ghost .note { margin-top: 30px; font-size: 15px; letter-spacing: 3px; color: rgba(255, 217, 163, 0.85); }
-  .ghost .note small { display: block; margin-top: 12px; font-size: 12px; letter-spacing: 2px; color: rgba(170, 220, 205, 0.45); }
+  /* ---------- side section nav ---------- */
+  .sidenav{position:fixed;right:26px;top:50%;transform:translateY(-50%);z-index:30;
+    display:flex;flex-direction:column;gap:14px;align-items:center}
+  .sidenav a{width:10px;height:10px;border-radius:50%;background:rgba(53,224,176,.22);
+    border:1px solid transparent;transition:all .3s ease;position:relative}
+  .sidenav a:hover{background:rgba(53,224,176,.5)}
+  .sidenav a.on{background:var(--brand);box-shadow:0 0 10px rgba(53,224,176,.9);transform:scale(1.25)}
+  .sidenav a span{position:absolute;right:22px;top:50%;transform:translateY(-50%);white-space:nowrap;
+    font-family:var(--font-mono);font-size:11px;letter-spacing:1px;color:var(--text-lo);
+    opacity:0;transition:opacity .25s ease;pointer-events:none}
+  .sidenav a:hover span,.sidenav a.on span{opacity:1;color:var(--brand-soft)}
 
-  /* 背景网格与光斑 */
-  .bgline { position: fixed; inset: 0; z-index: 0; pointer-events: none;
-            background-image: linear-gradient(rgba(53, 224, 176, 0.04) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(53, 224, 176, 0.04) 1px, transparent 1px);
-            background-size: 64px 64px; }
-  .glow { position: fixed; z-index: 0; pointer-events: none; border-radius: 50%; filter: blur(90px); }
-  .glow.g1 { width: 520px; height: 520px; right: -140px; top: -160px; background: rgba(53, 224, 176, 0.10); }
-  .glow.g2 { width: 420px; height: 420px; left: -120px; bottom: -140px; background: rgba(255, 179, 71, 0.07); }
+  /* ---------- layout ---------- */
+  main{position:relative;z-index:1}
+  section{position:relative;padding:clamp(70px,11vh,130px) var(--pad);max-width:1280px;margin:0 auto}
+  .eyebrow{font-family:var(--font-mono);font-size:13px;letter-spacing:3px;color:var(--brand);
+    text-transform:uppercase;margin-bottom:20px;display:flex;justify-content:center;align-items:center;gap:12px}
+  .eyebrow::before{content:"";width:34px;height:1px;background:var(--brand);opacity:.7}
+  h1{font-family:var(--font-display);font-weight:800;font-size:clamp(40px,7vw,82px);line-height:1.08;
+    color:var(--text-hi);letter-spacing:-.5px}
+  h2{font-family:var(--font-display);font-weight:700;font-size:clamp(28px,3.6vw,46px);line-height:1.18;
+    color:var(--text-hi);margin-bottom:26px;letter-spacing:-.3px;text-align:center}
+  .lead{font-size:clamp(15px,1.4vw,18px);line-height:1.85;color:var(--text-mid);max-width:760px;margin-left:auto;margin-right:auto}
+  .rule{width:72px;height:3px;background:linear-gradient(90deg,var(--brand),var(--amber));
+    border-radius:2px;margin:30px auto}
 
-  /* ---------- 导航 ---------- */
-  .nav { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 20;
-         display: flex; align-items: center; gap: 20px; }
-  .nav button { width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(53, 224, 176, 0.35);
-                background: rgba(10, 20, 17, 0.7); color: #35e0b0; font-size: 16px; cursor: pointer;
-                transition: all 0.25s ease; }
-  .nav button:hover { background: rgba(53, 224, 176, 0.15); }
-  .dots { display: flex; gap: 9px; }
-  .dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(53, 224, 176, 0.25); cursor: pointer; transition: all 0.3s ease; }
-  .dots i.on { background: #35e0b0; box-shadow: 0 0 8px rgba(53, 224, 176, 0.8); }
-  .counter { position: fixed; bottom: 38px; right: 40px; z-index: 20; font-size: 13px; letter-spacing: 3px; color: rgba(160, 215, 195, 0.55); }
-  .counter b { color: #35e0b0; font-size: 17px; }
+  /* reveal — 内页内容一段一段跳入 (滚动揭示，错峰弹入) */
+  .reveal{opacity:0;transform:translateY(30px) scale(.94)}
+  .reveal.in{animation:jumpIn .62s cubic-bezier(.2,.8,.25,1.12) both}
+  .reveal.done{opacity:1;transform:none;animation:none}
+  @keyframes jumpIn{
+    0%{opacity:0;transform:translateY(30px) scale(.9)}
+    46%{opacity:1;transform:translateY(-11px) scale(1.04)}
+    70%{transform:translateY(4px) scale(.985)}
+    100%{opacity:1;transform:translateY(0) scale(1)}
+  }
+
+  /* heroPop — 封面专属：从中心弹出 + 过冲回弹 (第一页入场) */
+  .heropop{opacity:0;transform:translateY(46px) scale(.4)}
+  .heropop.in{animation:heroPop .95s cubic-bezier(.18,.9,.24,1.25) both}
+  .heropop.done{opacity:1;transform:none;animation:none}
+  @keyframes heroPop{
+    0%{opacity:0;transform:translateY(46px) scale(.4)}
+    50%{opacity:1;transform:translateY(-16px) scale(1.12)}
+    76%{transform:translateY(7px) scale(.96)}
+    100%{opacity:1;transform:translateY(0) scale(1)}
+  }
+  .reveal.d1{animation-delay:.08s}.reveal.d2{animation-delay:.16s}.reveal.d3{animation-delay:.24s}
+  .reveal.d4{animation-delay:.32s}.reveal.d5{animation-delay:.40s}.reveal.d6{animation-delay:.48s}
+  .reveal.d7{animation-delay:.56s}.reveal.d8{animation-delay:.64s}
+  .heropop.d1{animation-delay:.14s}.heropop.d2{animation-delay:.28s}.heropop.d3{animation-delay:.42s}
+  .heropop.d4{animation-delay:.56s}.heropop.d5{animation-delay:.70s}.heropop.d6{animation-delay:.84s}
+
+  /* ---------- HERO ---------- */
+  #sec01{min-height:100vh;display:flex;flex-direction:column;justify-content:center;max-width:none}
+  #sec01 .inner{max-width:1280px;margin:0 auto;width:100%;position:relative;text-align:center}
+  .hero-arc{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);width:min(1100px,120vw);
+    z-index:0;pointer-events:none;opacity:.9}
+  .hero-arc .pulse{animation:arcPulse 6s ease-in-out infinite}
+  @keyframes arcPulse{0%,100%{opacity:.55}50%{opacity:1}}
+  .hero-kpis{display:flex;flex-wrap:wrap;gap:clamp(24px,5vw,72px);margin-top:46px;justify-content:center}
+  .kpi .num{font-family:var(--font-mono);font-weight:700;font-size:clamp(30px,4vw,50px);
+    color:var(--brand);text-shadow:0 0 22px rgba(53,224,176,.35);line-height:1}
+  .kpi .lbl{font-size:13px;letter-spacing:1px;color:var(--text-lo);margin-top:8px}
+  .cta{display:flex;flex-wrap:wrap;gap:16px;margin-top:42px;justify-content:center}
+  .btn{font-family:var(--font-cn);font-size:15px;text-decoration:none;padding:14px 28px;border-radius:999px;
+    transition:all .25s ease;cursor:pointer;border:1px solid transparent}
+  .btn.primary{background:linear-gradient(90deg,var(--brand),var(--lime));color:#04130d;font-weight:700;
+    box-shadow:0 0 26px rgba(53,224,176,.35)}
+  .btn.primary:hover{transform:translateY(-2px);box-shadow:0 0 38px rgba(53,224,176,.55)}
+  .btn.ghost{border-color:var(--line-strong);color:var(--brand-soft);background:rgba(12,26,22,.4)}
+  .btn.ghost:hover{background:rgba(53,224,176,.12);border-color:var(--brand)}
+  .scrollcue{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);display:flex;
+    flex-direction:column;align-items:center;gap:8px;color:var(--text-lo);font-family:var(--font-mono);
+    font-size:11px;letter-spacing:3px}
+  .scrollcue .bar{width:1px;height:34px;background:linear-gradient(var(--brand),transparent);
+    animation:cue 1.8s ease-in-out infinite}
+  @keyframes cue{0%,100%{opacity:.3;transform:scaleY(.6)}50%{opacity:1;transform:scaleY(1)}}
+  .counter10{position:absolute;bottom:34px;right:var(--pad);font-family:var(--font-mono);font-size:13px;
+    letter-spacing:3px;color:var(--text-lo)}
+  .counter10 b{color:var(--brand);font-size:18px}
+
+  /* ---------- cards / grid ---------- */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:44px}
+  .card{background:var(--bg-surface);border:1px solid var(--line);border-radius:18px;padding:24px;
+    transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease}
+  .card:hover{transform:translateY(-5px);border-color:var(--line-strong);
+    box-shadow:0 14px 40px rgba(0,0,0,.4),0 0 0 1px rgba(53,224,176,.12)}
+  .card .tag{font-family:var(--font-mono);font-size:13px;color:var(--brand);font-weight:700;margin-bottom:10px;
+    letter-spacing:.5px}
+  .card h3{font-size:17px;color:var(--text-hi);margin-bottom:10px;font-weight:700}
+  .card p{font-size:13.5px;color:var(--text-mid);line-height:1.65}
+  .card.amber .tag{color:var(--amber)}
+  .card .ico{width:34px;height:34px;margin-bottom:14px}
+
+  .device-line{font-family:var(--font-mono);font-size:13px;color:var(--text-lo);margin-top:22px;
+    letter-spacing:.5px;display:flex;flex-wrap:wrap;gap:8px}
+  .device-line span{border:1px solid var(--line);padding:5px 12px;border-radius:999px;color:var(--brand-soft)}
+
+  /* ---------- topology ---------- */
+  .topo-wrap{margin-top:40px;background:var(--bg-surface);border:1px solid var(--line);border-radius:22px;
+    padding:18px;overflow:hidden}
+  .topo{width:100%;height:auto;display:block}
+  .tl{stroke-dasharray:2600;stroke-dashoffset:2600;transition:stroke-dashoffset 1.7s ease}
+  .topo.draw .tl{stroke-dashoffset:0}
+  .node-box{fill:var(--bg-elevated);stroke:var(--line-strong);stroke-width:1.4}
+  .node-box.fw{stroke:var(--amber);stroke-width:1.8}
+  .node-box.core{stroke:var(--brand);stroke-width:1.8}
+  .node-box.ap{stroke:var(--lime);stroke-width:1.8}
+  .node-t{fill:var(--text-hi);font-family:var(--font-cn);font-size:15px;font-weight:700}
+  .node-s{fill:var(--text-lo);font-family:var(--font-mono);font-size:11px}
+  .net-l{fill:var(--brand);font-family:var(--font-mono);font-size:12px;opacity:.85}
+  .pulse-dot{fill:var(--brand);animation:nodedot 2.4s ease-in-out infinite}
+  @keyframes nodedot{0%,100%{opacity:.4}50%{opacity:1;filter:drop-shadow(0 0 6px var(--brand))}}
+
+  /* ---------- matrix ---------- */
+  .mtable{margin-top:40px;display:flex;flex-direction:column;gap:8px;overflow-x:auto}
+  .mhead,.mrow{display:grid;grid-template-columns:1.4fr repeat(6,1fr);gap:8px;min-width:880px}
+  .mhead div{background:var(--bg-elevated);border-radius:12px;padding:13px 6px;text-align:center;
+    font-family:var(--font-mono);font-size:13px;color:var(--brand-soft)}
+  .mhead div:first-child{color:var(--text-mid)}
+  .mrow div{background:var(--bg-surface);border:1px solid var(--line);border-radius:12px;padding:14px 6px;
+    text-align:center;font-size:14px}
+  .mrow .src{font-family:var(--font-mono);font-weight:700;color:var(--text-hi);background:var(--bg-elevated);
+    border-color:var(--line-strong)}
+  .ok{color:var(--brand);font-weight:700}
+  .no{color:var(--deny);font-weight:700}
+  .mcap{margin-top:20px;font-size:13px;color:var(--text-lo);line-height:1.7;max-width:880px}
+
+  /* ---------- two column ---------- */
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:40px}
+  .panel{background:var(--bg-surface);border:1px solid var(--line);border-radius:22px;padding:28px}
+  .panel h3{font-size:18px;color:var(--text-hi);margin-bottom:18px;font-weight:700}
+  .pl{font-size:14px;color:var(--text-mid);padding:9px 0;border-bottom:1px solid var(--line);line-height:1.5}
+  .pl:last-child{border-bottom:none}
+  .pl .g{color:var(--brand)} .pl .a{color:var(--amber)} .pl .r{color:var(--deny)}
+  .srv{display:flex;gap:12px;align-items:center;background:var(--bg-elevated);border-radius:12px;
+    padding:12px 14px;margin-bottom:10px}
+  .srv .n{font-family:var(--font-mono);font-weight:700;color:var(--brand);width:74px;flex:none}
+  .srv .d{font-size:13px;color:var(--text-mid);line-height:1.4}
+
+  /* ---------- budget table ---------- */
+  .btable{margin-top:40px;border:1px solid var(--line);border-radius:18px;overflow:hidden}
+  .brow{display:grid;grid-template-columns:1fr 90px 170px;gap:12px;padding:15px 20px;align-items:center;
+    border-bottom:1px solid var(--line)}
+  .brow:last-child{border-bottom:none}
+  .brow.head{background:var(--bg-elevated);font-family:var(--font-mono);font-size:13px;color:var(--brand-soft)}
+  .brow .nm{color:var(--text-hi);font-size:14.5px}
+  .brow .qt{text-align:center;color:var(--text-mid)}
+  .brow .sm{text-align:right;font-family:var(--font-mono);color:var(--brand);font-size:15px}
+  .brow.total{background:var(--bg-elevated);border-top:1px solid var(--line-strong)}
+  .brow.total .nm{color:var(--brand);font-weight:700;font-family:var(--font-cn)}
+  .brow.total .sm{font-weight:700;font-size:19px;text-shadow:0 0 16px rgba(53,224,176,.3)}
+  .bnote{margin-top:18px;font-size:13px;color:var(--text-lo);line-height:1.7}
+
+  /* ---------- acceptance ---------- */
+  .accgrid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:40px}
+  .accgrid .panel h3{margin-bottom:16px}
+  .acc{font-size:13.5px;color:var(--text-hi);padding:9px 0;border-bottom:1px solid var(--line);line-height:1.55}
+  .acc:last-child{border-bottom:none}
+  .acc b{color:var(--brand);font-family:var(--font-mono);margin-right:6px}
+
+  /* ---------- plan / errata ---------- */
+  .stages{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:40px}
+  .stage{background:var(--bg-surface);border:1px solid var(--line);border-radius:18px;padding:22px;transition:all .3s}
+  .stage:hover{transform:translateY(-4px);border-color:var(--line-strong)}
+  .stage .ph{font-family:var(--font-mono);color:var(--brand);font-weight:700;font-size:15px;margin-bottom:4px}
+  .stage .wk{font-family:var(--font-mono);color:var(--amber);font-size:12px;margin-bottom:12px}
+  .stage .ds{font-size:13.5px;color:var(--text-mid);line-height:1.6}
+  .errata{margin-top:36px;background:var(--bg-elevated);border:1px solid var(--line-strong);border-radius:22px;
+    padding:28px}
+  .errata h3{font-size:18px;color:var(--text-hi);margin-bottom:16px;font-weight:700}
+  .er{font-size:13.5px;color:var(--text-mid);padding:8px 0;border-bottom:1px solid var(--line);line-height:1.6}
+  .er:last-child{border-bottom:none}
+  .er b{color:var(--amber);font-family:var(--font-mono);margin-right:8px}
+
+  footer{position:relative;z-index:1;text-align:center;padding:60px 20px 80px;color:var(--text-lo);
+    font-family:var(--font-mono);font-size:12px;letter-spacing:2px;border-top:1px solid var(--line)}
+  footer a{color:var(--brand);text-decoration:none}
+
+  @media(max-width:760px){
+    .twocol,.accgrid{grid-template-columns:1fr}
+    .sidenav{display:none}
+    .mhead,.mrow{grid-template-columns:1.2fr repeat(6,.8fr)}
+  }
 </style>
 </head>
 <body>
+<div class="bg-gradient">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+  <div class="blob b4"></div>
+</div>
 <div class="bgline"></div>
-<div class="glow g1"></div>
-<div class="glow g2"></div>
+<div class="horizon"></div>
+<canvas id="tf"></canvas>
+<div class="progress" id="progress"></div>
 
-<div class="topbar">
+<div class="topbar" id="topbar">
   <a class="back" href="index.html">← 返回星球</a>
   <div class="mark"><b>y<i>'</i>world</b>&nbsp;&nbsp;·&nbsp;&nbsp;PROJECT SHOWCASE</div>
 </div>
 
-<div class="deck">
-  <!-- Slide 1 · 封面 -->
-  <section class="slide active">
-    <div class="eyebrow">Network Engineering · Real-Device Deployment</div>
-    <h1>园区网建设项目<br><span class="thin">真机实施版</span></h1>
-    <div class="rule"></div>
-    <p class="sub">基于华为真实设备的园区网全流程交付 —— 从需求分析、拓扑设计、设备配置到验收测试与运维体系，全部配置可直接粘贴至真机执行。</p>
-    <div class="chips">
-      <span class="chip">华为 AR6120 路由器 ×4</span>
-      <span class="chip">S5720 交换机 ×4</span>
-      <span class="chip">USG6500E 防火墙</span>
-      <span class="chip">AirEngine 无线 AP</span>
-      <span class="chip amber">x86 服务器区</span>
+<nav class="sidenav" id="sidenav"></nav>
+
+<main>
+  <!-- 01 HERO -->
+  <section id="sec01">
+    <div class="inner">
+      <svg class="hero-arc" viewBox="0 0 1100 380" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="arcg" x1="0" y1="0" x2="1100" y2="0" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#35e0b0" stop-opacity="0"/>
+            <stop offset=".5" stop-color="#35e0b0" stop-opacity=".9"/>
+            <stop offset="1" stop-color="#35e0b0" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path class="pulse" d="M0 320 Q550 40 1100 320" stroke="url(#arcg)" stroke-width="2.5"/>
+        <path class="pulse" d="M0 340 Q550 90 1100 340" stroke="#ffb347" stroke-opacity=".25" stroke-width="1.5"/>
+      </svg>
+      <div class="eyebrow heropop in">Network Engineering · Real-Device Deployment</div>
+      <h1 class="heropop in d1">实训楼园区网络<br><span style="font-weight:300;color:rgba(220,245,235,.78)">真机实施版</span></h1>
+      <div class="rule heropop in d2"></div>
+      <p class="lead heropop in d2" style="max-width:680px">基于华为真实设备的园区网全流程交付 —— 从需求分析、拓扑设计、设备配置到验收测试与运维体系，全部配置可直接粘贴至真机执行。</p>
+      <div class="cta heropop in d3">
+        <a class="btn primary" href="#sec02">查看完整方案</a>
+        <a class="btn ghost" href="#sec03">网络拓扑</a>
+      </div>
+      <div class="hero-kpis heropop in d4">
+        <div class="kpi"><div class="num" data-to="6">0</div><div class="lbl">业务 VLAN</div></div>
+        <div class="kpi"><div class="num" data-to="800">0</div><div class="lbl">信息点</div></div>
+        <div class="kpi"><div class="num" data-to="11">0</div><div class="lbl">配置脚本</div></div>
+        <div class="kpi"><div class="num" data-to="125298" data-cur="1">0</div><div class="lbl">预算 ¥</div></div>
+      </div>
+      <div class="scrollcue"><span>SCROLL</span><span class="bar"></span></div>
+      <div class="counter10"><b>01</b> / 10</div>
     </div>
   </section>
 
-  <!-- Slide 2 · 项目概览 -->
-  <section class="slide">
-    <div class="eyebrow">Overview</div>
-    <h2>项目概览</h2>
-    <div class="grid">
-      <div class="item"><b>VLAN 与 ACL 隔离</b><span>6 个业务 VLAN 划分，接入/时间 ACL 精细化访问控制</span></div>
-      <div class="item"><b>OSPF 多区域路由</b><span>Area 0 骨干 + 三个接入区域，防火墙统一下发默认路由</span></div>
-      <div class="item"><b>防火墙安全策略</b><span>默认拒绝 + 最小权限放行，easy-ip NAT 按 VLAN 权限精细化</span></div>
-      <div class="item"><b>无线网络</b><span>Campus-WiFi SSID，WPA2-PSK，独立业务 VLAN 与 DHCP 地址池</span></div>
-      <div class="item"><b>服务器区部署</b><span>WWW / FTP / Email / 运维四台独立服务器，一键部署脚本</span></div>
-      <div class="item"><b>运维体系</b><span>SSH 管理、NTP 对时、SNMP 告警、TFTP 配置备份</span></div>
+  <!-- 02 OVERVIEW -->
+  <section id="sec02">
+    <div class="eyebrow reveal">02 / OVERVIEW · 项目概览</div>
+    <h2 class="reveal d1">一栋实训楼，六个隔离的业务网段</h2>
+    <p class="lead reveal d1">全网以华为 AR6120 / S5720 / USG6500E 为核心，划分 6 个业务 VLAN、约 800 个信息点，通过 ACL 与防火墙策略实施双层纵深访问控制，形成可真机落地的园区网。</p>
+    <div class="device-line reveal d2">
+      <span>华为 AR6120 ×4</span><span>S5720 ×4</span><span>USG6500E 防火墙</span><span>AirEngine 无线 AP</span><span>x86 服务器 ×4</span>
+    </div>
+    <div class="cards">
+      <div class="card reveal d1"><div class="tag">01</div><h3>VLAN 与 ACL 隔离</h3><p>6 个业务 VLAN 划分，接入 / 时间 ACL 精细化访问控制，互访隔离。</p></div>
+      <div class="card reveal d2"><div class="tag">02</div><h3>OSPF 多区域路由</h3><p>Area 0 骨干 + 三个接入区域，ABR 边界汇聚，防火墙统一下发默认路由。</p></div>
+      <div class="card reveal d3"><div class="tag">03</div><h3>防火墙安全策略</h3><p>默认拒绝 + 最小权限放行，easy-ip NAT 按 VLAN 权限精细化出网。</p></div>
+      <div class="card reveal d4"><div class="tag">04</div><h3>无线接入</h3><p>Campus-WiFi SSID，WPA2-PSK，独立业务 VLAN 与 DHCP 地址池。</p></div>
+      <div class="card reveal d5"><div class="tag">05</div><h3>服务器区部署</h3><p>WWW / FTP / Email / 运维四台独立服务器，一键部署脚本。</p></div>
+      <div class="card amber reveal d6"><div class="tag">06</div><h3>运维体系</h3><p>SSH 管理、NTP 对时、SNMP 告警、TFTP 配置备份全量覆盖。</p></div>
     </div>
   </section>
 
-  <!-- Slide 3 · 占位 -->
-  <section class="slide">
-    <div class="eyebrow">Coming Soon</div>
-    <div class="ghost">
-      <div class="big">待补充</div>
-      <div class="note">PPT 正式内容等待补充 —— 方案细节 / 拓扑图 / 实施过程
-        <small>这一页将用于展示项目实施方案与网络拓扑设计</small>
+  <!-- 03 TOPOLOGY -->
+  <section id="sec03">
+    <div class="eyebrow reveal">03 / TOPOLOGY · 网络拓扑</div>
+    <h2 class="reveal d1">从出口到桌面，一张图看清四层链路</h2>
+    <p class="lead reveal d1">边界防火墙对接校园网，下联核心路由器 R4，经 ABR（R1/R2/R3）接入汇聚交换机，最终到达接入层与无线 / 终端 —— 四层链路一目了然。</p>
+    <div class="topo-wrap reveal d2">
+      <svg class="topo" id="topo" viewBox="0 0 1100 720" fill="none" aria-label="园区网拓扑">
+        <!-- links -->
+        <line class="tl" x1="550" y1="92" x2="550" y2="150" stroke="#ffb347" stroke-width="2"/>
+        <line class="tl" x1="550" y1="208" x2="550" y2="270" stroke="#35e0b0" stroke-width="2"/>
+        <line class="tl" x1="300" y1="330" x2="550" y2="392" stroke="#35e0b0" stroke-width="2"/>
+        <line class="tl" x1="550" y1="330" x2="550" y2="392" stroke="#35e0b0" stroke-width="2"/>
+        <line class="tl" x1="800" y1="330" x2="550" y2="392" stroke="#35e0b0" stroke-width="2"/>
+        <line class="tl" x1="300" y1="450" x2="550" y2="500" stroke="#a8f55a" stroke-width="1.6"/>
+        <line class="tl" x1="550" y1="450" x2="550" y2="500" stroke="#a8f55a" stroke-width="1.6"/>
+        <line class="tl" x1="800" y1="450" x2="550" y2="500" stroke="#a8f55a" stroke-width="1.6"/>
+        <line class="tl" x1="230" y1="560" x2="550" y2="600" stroke="#a8f55a" stroke-width="1.6"/>
+        <line class="tl" x1="450" y1="560" x2="550" y2="600" stroke="#a8f55a" stroke-width="1.6"/>
+        <line class="tl" x1="770" y1="560" x2="550" y2="600" stroke="#a8f55a" stroke-width="1.6"/>
+        <line class="tl" x1="930" y1="560" x2="900" y2="600" stroke="#a8f55a" stroke-width="1.6"/>
+        <line class="tl" x1="230" y1="620" x2="230" y2="670" stroke="#35e0b0" stroke-width="1.4"/>
+        <line class="tl" x1="450" y1="620" x2="450" y2="670" stroke="#35e0b0" stroke-width="1.4"/>
+        <line class="tl" x1="770" y1="620" x2="670" y2="670" stroke="#35e0b0" stroke-width="1.4"/>
+        <line class="tl" x1="900" y1="620" x2="900" y2="670" stroke="#a8f55a" stroke-width="1.4"/>
+        <!-- nodes -->
+        <rect class="node-box fw" x="420" y="58" width="260" height="52" rx="10"/>
+        <text class="node-t" x="550" y="80" text-anchor="middle">校园网 10.106.0.0/16</text>
+        <text class="node-s" x="550" y="100" text-anchor="middle">Campus Network</text>
+        <rect class="node-box fw" x="420" y="150" width="260" height="58" rx="10"/>
+        <text class="node-t" x="550" y="174" text-anchor="middle">USG6500E 防火墙</text>
+        <text class="node-s" x="550" y="194" text-anchor="middle">trust ⇄ untrust</text>
+        <rect class="node-box core" x="430" y="270" width="240" height="60" rx="10"/>
+        <text class="node-t" x="550" y="294" text-anchor="middle">R4 · AR6120</text>
+        <text class="node-s" x="550" y="314" text-anchor="middle">Area 0 骨干</text>
+        <rect class="node-box" x="180" y="330" width="240" height="60" rx="10"/>
+        <text class="node-t" x="300" y="354" text-anchor="middle">R1 · AR6120 (ABR)</text>
+        <text class="node-s" x="300" y="374" text-anchor="middle">Area 1</text>
+        <rect class="node-box" x="430" y="330" width="240" height="60" rx="10"/>
+        <text class="node-t" x="550" y="354" text-anchor="middle">R2 · AR6120 (ABR)</text>
+        <text class="node-s" x="550" y="374" text-anchor="middle">Area 2</text>
+        <rect class="node-box" x="680" y="330" width="240" height="60" rx="10"/>
+        <text class="node-t" x="800" y="354" text-anchor="middle">R3 · AR6120 (ABR)</text>
+        <text class="node-s" x="800" y="374" text-anchor="middle">Area 3</text>
+        <rect class="node-box core" x="430" y="500" width="240" height="60" rx="10"/>
+        <text class="node-t" x="550" y="524" text-anchor="middle">SW1 · S5720 核心</text>
+        <text class="node-s" x="550" y="544" text-anchor="middle">RSTP 根桥</text>
+        <rect class="node-box" x="110" y="560" width="240" height="60" rx="10"/>
+        <text class="node-t" x="230" y="584" text-anchor="middle">SW2 · 接入</text>
+        <text class="node-s" x="230" y="604" text-anchor="middle">备份根桥</text>
+        <rect class="node-box" x="330" y="560" width="240" height="60" rx="10"/>
+        <text class="node-t" x="450" y="584" text-anchor="middle">SW3 · 接入</text>
+        <text class="node-s" x="450" y="604" text-anchor="middle"></text>
+        <rect class="node-box" x="650" y="560" width="240" height="60" rx="10"/>
+        <text class="node-t" x="770" y="584" text-anchor="middle">SW4 · 接入</text>
+        <text class="node-s" x="770" y="604" text-anchor="middle">PoE</text>
+        <rect class="node-box ap" x="810" y="560" width="180" height="60" rx="10"/>
+        <text class="node-t" x="900" y="584" text-anchor="middle">AP · 无线</text>
+        <text class="node-s" x="900" y="604" text-anchor="middle">WPA2-PSK</text>
+        <!-- terminals -->
+        <rect class="node-box" x="170" y="670" width="120" height="38" rx="8"/>
+        <text class="node-s" x="230" y="694" text-anchor="middle">PC2 · 100</text>
+        <rect class="node-box" x="390" y="670" width="120" height="38" rx="8"/>
+        <text class="node-s" x="450" y="694" text-anchor="middle">PC3 · 200</text>
+        <rect class="node-box" x="610" y="670" width="120" height="38" rx="8"/>
+        <text class="net-l" x="670" y="694" text-anchor="middle">PC4–6</text>
+        <rect class="node-box ap" x="840" y="670" width="120" height="38" rx="8"/>
+        <text class="net-l" x="900" y="694" text-anchor="middle">PC7 无线</text>
+        <!-- net labels -->
+        <text class="net-l" x="560" y="135">8.0/24</text>
+        <text class="net-l" x="560" y="248">9.0/24</text>
+        <text class="net-l" x="560" y="478">Eth-Trunk</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 04 VLAN & ACL -->
+  <section id="sec04">
+    <div class="eyebrow reveal">04 / VLAN & ACL 矩阵</div>
+    <h2 class="reveal d1">六个业务网段，差异化的访问控制</h2>
+    <p class="lead reveal d1">全网划分 VLAN100～600 共 6 个业务 VLAN，约 800 个信息点。网关统一终结在上联路由器 802.1Q 子接口，通过 ACL 与防火墙策略实施双层纵深访问控制。</p>
+    <div class="cards">
+      <div class="card reveal d1"><div class="tag">VLAN 100</div><h3>172.16.2.0/24</h3><p>服务器区 · 100 用户<br>策略：全网可达，可出校园网与 Internet</p></div>
+      <div class="card reveal d2"><div class="tag">VLAN 200</div><h3>172.16.3.0/24</h3><p>教学/办公 · 100 用户<br>策略：与 VLAN100 互访隔离(ACL)，可出网</p></div>
+      <div class="card reveal d3"><div class="tag">VLAN 300</div><h3>172.16.4.0/24</h3><p>实验室一 · 100 用户<br>策略：与 VLAN400 互通，仅限校园网 10.0.0.0/8</p></div>
+      <div class="card reveal d4"><div class="tag">VLAN 400</div><h3>172.16.5.0/24</h3><p>实验室二 · 200 用户<br>策略：与 VLAN300 互通，仅限校园网 10.0.0.0/8</p></div>
+      <div class="card reveal d5"><div class="tag">VLAN 500</div><h3>172.16.6.0/24</h3><p>行政办公 · 200 用户<br>策略：仅可达园区网，禁校园网/Internet</p></div>
+      <div class="card amber reveal d6"><div class="tag">VLAN 600</div><h3>172.16.7.0/24</h3><p>无线接入 · 100 用户<br>策略：DHCP 接入，可出 Internet</p></div>
+    </div>
+    <div class="mtable reveal d3">
+      <div class="mhead">
+        <div>源 \ 目的</div><div>VLAN200</div><div>VLAN300/400</div><div>VLAN500</div><div>VLAN600</div><div>校园网</div><div>Internet</div>
+      </div>
+      <div class="mrow"><div class="src">VLAN 100</div><div class="ok">通</div><div class="ok">通</div><div class="ok">通</div><div class="ok">通</div><div class="ok">通</div><div class="ok">通</div></div>
+      <div class="mrow"><div class="src">VLAN 200</div><div class="no">断·ACL</div><div class="ok">通</div><div class="ok">通</div><div class="ok">通</div><div class="ok">通</div><div class="ok">通</div></div>
+      <div class="mrow"><div class="src">VLAN 300/400</div><div class="ok">通</div><div class="ok">互通</div><div class="ok">通</div><div class="ok">通</div><div class="ok">通</div><div class="no">断</div></div>
+      <div class="mrow"><div class="src">VLAN 500</div><div class="ok">通</div><div class="ok">通</div><div class="ok">通</div><div class="ok">通</div><div class="no">断</div><div class="no">断</div></div>
+      <div class="mrow"><div class="src">VLAN 600</div><div class="ok">通</div><div class="ok">通</div><div class="ok">通</div><div class="ok">通</div><div class="ok">通</div><div class="ok">通</div></div>
+    </div>
+    <p class="mcap reveal d3">通 = 允许访问 · 断 = 禁止访问 ｜ VLAN200 与 VLAN100 互访隔离（R1 ACL 3000）｜ VLAN300/400 仅限校园网 10.0.0.0/8 ｜ VLAN500 仅限园区网 ｜ 时间 ACL：工作日 09:00–17:00 限制 VLAN300/500 访问 FTP(21) 与 WWW(80)，Email 不受限。</p>
+  </section>
+
+  <!-- 05 OSPF -->
+  <section id="sec05">
+    <div class="eyebrow reveal">05 / ROUTING · OSPF 多区域</div>
+    <h2 class="reveal d1">OSPF 分区域组网，ABR 边界路由汇聚</h2>
+    <p class="lead reveal d1">OSPF 进程 1 划分 1 个骨干区域与 3 个非骨干区域；R1/R2/R3 作为 ABR 在非骨干区域边界实施路由汇聚，互联链路统一 p2p 网络类型加快收敛，出口默认路由由防火墙统一下发。</p>
+    <div class="cards">
+      <div class="card reveal d1" style="border-color:rgba(53,224,176,.4)"><div class="tag">AREA 0</div><h3>骨干区域</h3><p>R4（AR6120）＋ 防火墙 USG6500E<br>Router-ID 172.16.11.10<br>承载 172.16.8/9/10/12.0/24 四条互联链路</p></div>
+      <div class="card reveal d2"><div class="tag">AREA 1</div><h3>R1（ABR）</h3><p>VLAN100 / VLAN200<br>172.16.2.0/24 · 172.16.3.0/24<br>汇聚 172.16.2.0/23</p></div>
+      <div class="card reveal d3"><div class="tag">AREA 2</div><h3>R2（ABR）</h3><p>VLAN300 / VLAN400<br>172.16.4.0/24 · 172.16.5.0/24<br>汇聚 172.16.4.0/23</p></div>
+      <div class="card reveal d4"><div class="tag">AREA 3</div><h3>R3（ABR）</h3><p>VLAN500 / VLAN600<br>172.16.6.0/24 · 172.16.7.0/24<br>汇聚 172.16.6.0/23</p></div>
+    </div>
+    <div class="panel reveal d3" style="margin-top:22px">
+      <h3>路由汇聚（ABR 边界）</h3>
+      <div class="pl"><span class="g">R1 · ABR</span>　172.16.2.0/24 ＋ 172.16.3.0/24　→　172.16.2.0/23</div>
+      <div class="pl"><span class="g">R2 · ABR</span>　172.16.4.0/24 ＋ 172.16.5.0/24　→　172.16.4.0/23</div>
+      <div class="pl"><span class="g">R3 · ABR</span>　172.16.6.0/24 ＋ 172.16.7.0/24　→　172.16.6.0/23</div>
+    </div>
+  </section>
+
+  <!-- 06 FIREWALL & NAT -->
+  <section id="sec06">
+    <div class="eyebrow reveal">06 / SECURITY · 防火墙与 NAT</div>
+    <h2 class="reveal d1">边界防火墙：最小权限策略 + 精细化 NAT</h2>
+    <p class="lead reveal d1">USG6500E 部署在园区网与校园网边界，trust 域对接 R4（172.16.12.0/24），untrust 域对接校园网（10.106.0.0/16）。安全策略默认全部拒绝、按需精确放行；NAT 采用 easy-ip，按网段精细授权出网。</p>
+    <div class="twocol">
+      <div class="panel reveal d1">
+        <h3>NAT 出网策略（easy-ip）</h3>
+        <div class="pl"><span class="g">放行</span>　VLAN100/200 · 172.16.2.0/23 → 任意目的</div>
+        <div class="pl"><span class="g">放行</span>　VLAN600 · 172.16.7.0/24 → 任意目的</div>
+        <div class="pl"><span class="a">限校园网</span>　VLAN300/400 · 172.16.4.0/23 → 仅 10.0.0.0/8</div>
+        <div class="pl"><span class="r">禁出网</span>　VLAN500 · 172.16.6.0/24 不配置 NAT 规则</div>
+      </div>
+      <div class="panel reveal d2">
+        <h3>安全策略（默认拒绝）</h3>
+        <div class="pl"><span class="r">默认动作</span>　拒绝全部（最小权限）</div>
+        <div class="pl"><span class="g">放行</span>　172.16.0.0/16 → 校园网 10.0.0.0/8</div>
+        <div class="pl"><span class="g">放行</span>　VLAN100/200/600 → Internet</div>
+        <div class="pl"><span class="g">放行</span>　网管 172.16.2.0/24 → local（SSH）</div>
+        <div class="pl"><span class="g">放行</span>　防火墙自身 ICMP 探测</div>
+        <div class="pl" style="margin-top:14px;color:var(--text-lo)">出口默认路由：防火墙配置静态默认路由指向校园网网关 10.106.203.1，并通过 OSPF default-route-advertise always 向全网下发，内网设备无需各自配置静态默认路由。</div>
       </div>
     </div>
   </section>
 
-  <!-- Slide 4 · 占位 -->
-  <section class="slide">
-    <div class="eyebrow">Coming Soon</div>
-    <div class="ghost">
-      <div class="big">待补充</div>
-      <div class="note">PPT 正式内容等待补充 —— 验收测试 / 运维交付
-        <small>这一页将用于展示验收测试矩阵与运维交接成果</small>
+  <!-- 07 WIRELESS & SERVERS -->
+  <section id="sec07">
+    <div class="eyebrow reveal">07 / WIRELESS & SERVERS · 无线与服务器</div>
+    <h2 class="reveal d1">无线接入 + 服务器区部署</h2>
+    <p class="lead reveal d1">VLAN600 部署 Fat AP 独立提供无线接入；VLAN100 服务器区部署 4 台独立主机，分别承载 WWW、FTP、Email 与运维服务，主机层启用 ufw 默认拒绝、仅开放业务端口。</p>
+    <div class="twocol">
+      <div class="panel reveal d1">
+        <h3>无线接入 · VLAN600</h3>
+        <div class="pl"><span class="g">SSID</span>　Campus-WiFi ｜ 加密 WPA2-PSK（AES）</div>
+        <div class="pl"><span class="g">上联</span>　SW4 G0/0/10 · Access VLAN600 · PoE 供电</div>
+        <div class="pl"><span class="g">地址</span>　R3 全局 DHCP 池 172.16.7.0/24，网关 .1</div>
+        <div class="pl"><span class="g">出网</span>　无线 → R3 路由 → 防火墙 NAT 出网</div>
+        <div class="pl" style="color:var(--text-lo)">演进方向：可平滑升级 AC + Fit AP + RADIUS 认证</div>
+      </div>
+      <div class="panel reveal d2">
+        <h3>服务器区 · VLAN100</h3>
+        <div class="srv"><div class="n">WWW</div><div class="d">172.16.2.10 · Ubuntu 22.04 + Nginx · TCP 80</div></div>
+        <div class="srv"><div class="n">FTP</div><div class="d">172.16.2.11 · Ubuntu 22.04 + vsftpd · TCP 20/21、40000-40100</div></div>
+        <div class="srv"><div class="n">Email</div><div class="d">172.16.2.12 · Ubuntu 22.04 + Postfix/Dovecot · TCP 25、110</div></div>
+        <div class="srv"><div class="n">运维</div><div class="d">172.16.2.13 · Ubuntu 22.04 + NTP/TFTP/SNMP · UDP 123、69、162</div></div>
       </div>
     </div>
   </section>
-</div>
 
-<div class="nav">
-  <button id="prev" aria-label="上一页">←</button>
-  <div class="dots" id="dots"></div>
-  <button id="next" aria-label="下一页">→</button>
-</div>
-<div class="counter"><b id="cur">1</b> / <span id="total">4</span></div>
+  <!-- 08 BUDGET -->
+  <section id="sec08">
+    <div class="eyebrow reveal">08 / BUDGET · 设备预算</div>
+    <h2 class="reveal d1">设备清单与预算</h2>
+    <p class="lead reveal d1">42U 标准机柜统一上架，设备按真机配置清单采购；AP 与服务器为本次真机化新增项。不含光缆及跳线费用。</p>
+    <div class="btable reveal d1">
+      <div class="brow head"><div>设备 / 型号</div><div class="qt">数量</div><div class="sm">小计 (¥)</div></div>
+      <div class="brow"><div class="nm">核心机柜 CCM-16 42U</div><div class="qt">1</div><div class="sm">23,800</div></div>
+      <div class="brow"><div class="nm">防火墙 USG6000E 系列</div><div class="qt">1</div><div class="sm">37,599</div></div>
+      <div class="brow"><div class="nm">二层交换机 S5720-28X-LI-AC</div><div class="qt">2</div><div class="sm">8,392.8</div></div>
+      <div class="brow"><div class="nm">三层交换机 S5720-36C-EI-AC</div><div class="qt">2</div><div class="sm">22,400</div></div>
+      <div class="brow"><div class="nm">路由器 AR6120</div><div class="qt">4</div><div class="sm">27,660</div></div>
+      <div class="brow"><div class="nm">机架附件 19 英寸</div><div class="qt">1</div><div class="sm">1,446</div></div>
+      <div class="brow"><div class="nm">无线 AP AirEngine 5760 系列</div><div class="qt">1</div><div class="sm">2,000</div></div>
+      <div class="brow"><div class="nm">服务器 1U 通用 ×4</div><div class="qt">4</div><div class="sm">32,000</div></div>
+      <div class="brow total"><div class="nm">合计</div><div class="qt">—</div><div class="sm">125,297.8</div></div>
+    </div>
+    <p class="bnote reveal d1">合计 ¥125,297.8（不含光缆及跳线）；无线 AP 与服务器为本方案真机化新增项。</p>
+  </section>
+
+  <!-- 09 ACCEPTANCE -->
+  <section id="sec09">
+    <div class="eyebrow reveal">09 / ACCEPTANCE · 验收测试矩阵</div>
+    <h2 class="reveal d1">全量验收测试矩阵</h2>
+    <p class="lead reveal d1">按 核心→出口→汇聚→接入→服务→无线 顺序验证，覆盖 VLAN 隔离、出网权限、时间 ACL、管理平面与路由汇聚。以下为关键验收项。</p>
+    <div class="accgrid">
+      <div class="panel reveal d1">
+        <h3>连通性 · 隔离 · 出网权限</h3>
+        <div class="acc"><b>1</b>PC2(VLAN100) ↔ PC3(VLAN200)：应不通（互访隔离）</div>
+        <div class="acc"><b>2</b>PC3 → 校园网 PC1：应通（可出网）</div>
+        <div class="acc"><b>3</b>PC4(300) ↔ PC5(400)：应通（互通）</div>
+        <div class="acc"><b>4</b>PC4 → 校园网：应通（仅限校园网）</div>
+        <div class="acc"><b>5</b>PC4 → Internet：应不通（禁 Internet）</div>
+        <div class="acc"><b>6</b>PC6(500) → PC2/PC4/PC7：应通（可达园区全网段）</div>
+        <div class="acc"><b>7</b>PC6 → 校园网：应不通（禁校园网/Internet）</div>
+        <div class="acc"><b>8</b>PC7(无线) → PC2：应通（内网可达）</div>
+        <div class="acc"><b>9</b>PC7(无线) → Internet：应通（可上 Internet）</div>
+      </div>
+      <div class="panel reveal d2">
+        <h3>时间 ACL · 管理平面 · 路由汇聚</h3>
+        <div class="acc"><b>10</b>PC4 工作日 09–17 → WWW:80：拒绝（时间 ACL）</div>
+        <div class="acc"><b>11</b>PC4 工作日 → FTP:21：拒绝（时间 ACL）</div>
+        <div class="acc"><b>12</b>PC4 → Email:25/110：正常（不受限）</div>
+        <div class="acc"><b>13</b>PC6 工作日 → WWW/FTP：拒绝（时间 ACL）</div>
+        <div class="acc"><b>14</b>管理机 → 各设备 SSH：登录成功（管理平面）</div>
+        <div class="acc"><b>15</b>R4 → display ip routing-table：存在 3 条 /23 汇聚路由</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 PLAN & ERRATA -->
+  <section id="sec10">
+    <div class="eyebrow reveal">10 / PLAN & ERRATA · 实施计划与勘误</div>
+    <h2 class="reveal d1">三周交付 · 真机化勘误</h2>
+    <p class="lead reveal d1">方案在课程设计原型基础上完成真机化复核，修正 11 处配置问题，形成可直接指导真机部署的实施计划，三周交付。</p>
+    <div class="stages">
+      <div class="stage reveal d1"><div class="ph">阶段一</div><div class="wk">第 1 周</div><div class="ds">设备到货验收、上架加电、布线打标</div></div>
+      <div class="stage reveal d2"><div class="ph">阶段二</div><div class="wk">第 1 周</div><div class="ds">核心层与出口配置（R4/防火墙）、OSPF 骨干打通</div></div>
+      <div class="stage reveal d3"><div class="ph">阶段三</div><div class="wk">第 2 周</div><div class="ds">汇聚接入层配置（R1~R3、SW1~SW4）、服务器部署</div></div>
+      <div class="stage reveal d4"><div class="ph">阶段四</div><div class="wk">第 2 周</div><div class="ds">无线部署、安全策略与时间 ACL 联调</div></div>
+      <div class="stage reveal d5"><div class="ph">阶段五</div><div class="wk">第 3 周</div><div class="ds">全量验收、文档移交与培训</div></div>
+    </div>
+    <div class="errata reveal d3">
+      <h3>真机化勘误对照表（课设 → 真机）</h3>
+      <div class="er"><b>1</b>课设时间范围不一致(09–20 / 11–17) → 统一 09:00–17:00 working-day</div>
+      <div class="er"><b>2</b>R3 ACL 笔误 192.16.7.0 → 修正为 172.16.7.0</div>
+      <div class="er"><b>3</b>WWW/FTP/Email 共用 172.16.2.2 → 拆分为 .10/.11/.12 三台独立服务器</div>
+      <div class="er"><b>4</b>Eth-Trunk1 物理口未加入成员(聚合未生效) → 补全成员并启用 LACP</div>
+      <div class="er"><b>5</b>SW2 stp priority 0 做根桥不合理 → SW4 根桥(4096)、SW2 备份(8192)</div>
+      <div class="er"><b>6</b>防火墙 untrust→trust 全放行 → 默认拒绝 + 最小权限精确放行</div>
+      <div class="er"><b>7</b>nat address-group 私转私无效 → 删除，统一 easy-ip 按 VLAN 授权</div>
+      <div class="er"><b>8</b>R1/R4 默认路由指向 10.106.1.254(不直连校园网) → 改防火墙 OSPF 下发</div>
+      <div class="er"><b>9</b>防火墙 OSPF 宣告 10.106.0.0/16(无权) → 仅宣告 172.16.12.0/24</div>
+      <div class="er"><b>10</b>全局 dhcp enable 但无地址池 → R3 补全 VLAN600 全局 DHCP 池</div>
+      <div class="er"><b>11</b>无统一管理平面(Telnet/明文/无对时) → 全网 SSH+AAA+NTP+SNMP Trap+TFTP</div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  y'world · 园区网建设项目（真机实施版）　·　<a href="index.html">← 返回星球</a>
+</footer>
 
 <script>
-const slides = document.querySelectorAll('.slide');
-const dotsEl = document.getElementById('dots');
-let cur = 0;
-document.getElementById('total').textContent = slides.length;
-slides.forEach((_, i) => {
-  const d = document.createElement('i');
-  if (i === 0) d.classList.add('on');
-  d.addEventListener('click', () => go(i));
-  dotsEl.appendChild(d);
-});
-function go(n) {
-  cur = (n + slides.length) % slides.length;
-  slides.forEach((s, i) => s.classList.toggle('active', i === cur));
-  dotsEl.querySelectorAll('i').forEach((d, i) => d.classList.toggle('on', i === cur));
-  document.getElementById('cur').textContent = cur + 1;
-}
-document.getElementById('prev').addEventListener('click', () => go(cur - 1));
-document.getElementById('next').addEventListener('click', () => go(cur + 1));
-window.addEventListener('keydown', e => {
-  if (e.key === 'ArrowRight' || e.key === ' ') go(cur + 1);
-  if (e.key === 'ArrowLeft') go(cur - 1);
-});
+(function(){
+  // ---- build side nav ----
+  const sections = Array.from(document.querySelectorAll('main section'));
+  const nav = document.getElementById('sidenav');
+  const labels = ['封面','概览','拓扑','VLAN/ACL','OSPF','防火墙/NAT','无线/服务器','预算','验收','计划/勘误'];
+  sections.forEach((s,i)=>{
+    const a=document.createElement('a');
+    a.href='#'+s.id; a.dataset.target=s.id;
+    a.innerHTML='<span>'+(i+1).toString().padStart(2,'0')+' '+labels[i]+'</span>';
+    a.addEventListener('click',e=>{e.preventDefault();s.scrollIntoView({behavior:'smooth'});});
+    nav.appendChild(a);
+  });
+  const dots = Array.from(nav.children);
+
+  // ---- scroll progress + topbar ----
+  const progress=document.getElementById('progress');
+  const topbar=document.getElementById('topbar');
+  function onScroll(){
+    const h=document.documentElement;
+    const sc=h.scrollTop, max=h.scrollHeight-h.clientHeight;
+    progress.style.width=(max>0?(sc/max*100):0)+'%';
+    topbar.classList.toggle('scrolled', sc>40);
+    document.body.classList.toggle('hero-active', sc < window.innerHeight*0.6);
+  }
+  window.addEventListener('scroll',onScroll,{passive:true}); onScroll();
+
+  // ---- active section dot ----
+  const spy=new IntersectionObserver(es=>{
+    es.forEach(e=>{
+      if(e.isIntersecting){
+        const id=e.target.id;
+        dots.forEach(d=>d.classList.toggle('on', d.dataset.target===id));
+      }
+    });
+  },{rootMargin:'-45% 0px -45% 0px'});
+  sections.forEach(s=>spy.observe(s));
+
+  // ---- reveal ----
+  const rev=new IntersectionObserver(es=>{
+    es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); rev.unobserve(e.target);} });
+  },{threshold:.12});
+  document.querySelectorAll('.reveal:not(.in)').forEach(el=>rev.observe(el));
+
+  // ---- count up (hero) ----
+  const kpis=document.querySelectorAll('.kpi .num');
+  let counted=false;
+  const cObs=new IntersectionObserver(es=>{
+    es.forEach(e=>{
+      if(e.isIntersecting && !counted){
+        counted=true;
+        kpis.forEach(k=>{
+          const to=+k.dataset.to, cur=k.dataset.cur==='1';
+          const dur=1400, t0=performance.now();
+          function step(t){
+            const p=Math.min(1,(t-t0)/dur);
+            const v=Math.floor((1-Math.pow(1-p,3))*to);
+            k.textContent = cur ? v.toLocaleString('en-US') : v;
+            if(p<1) requestAnimationFrame(step); else k.textContent = cur ? to.toLocaleString('en-US') : to;
+          }
+          requestAnimationFrame(step);
+        });
+      }
+    });
+  },{threshold:.4});
+  const heroSec=document.getElementById('sec01'); if(heroSec) cObs.observe(heroSec);
+
+  // ---- hero-active：精确跟随封面可见度，切换首屏发散 / 后续渐变 ----
+  const heroObs=new IntersectionObserver(es=>{
+    es.forEach(e=>{
+      document.body.classList.toggle('hero-active', e.isIntersecting && e.intersectionRatio>0.3);
+    });
+  },{threshold:[0,0.3,0.6,1]});
+  if(heroSec) heroObs.observe(heroSec);
+
+  // ---- topology draw ----
+  const topo=document.getElementById('topo');
+  const tObs=new IntersectionObserver(es=>{
+    es.forEach(e=>{ if(e.isIntersecting){ topo.classList.add('draw'); tObs.unobserve(topo);} });
+  },{threshold:.25});
+  if(topo) tObs.observe(topo);
+
+  // ---- reveal pop cleanup (释放 transform，保证卡片 hover 正常) ----
+  document.querySelectorAll('.reveal').forEach(el=>{
+    el.addEventListener('animationend', e=>{
+      if(e.animationName==='heroPop'||e.animationName==='jumpIn'){ el.classList.remove('in'); el.classList.add('done'); }
+    });
+  });
+
+  // ---- 第一页背景：中间「一整个光晕」+ 文字从光晕边沿向外发散 ----
+  // ---- 仅封面运行；离开首屏自动停止；浅白文字 + 低透明度，不抢内容 ----
+  (function(){
+    const cv=document.getElementById('tf'); if(!cv) return;
+    const ctx=cv.getContext('2d');
+    let W=0,H=0,DPR=1,cx=0,cy=0,haloR=0;
+    // 光晕直径 ≈ 标题「实训楼园区网络」的宽度。
+    // 用 canvas 量文字（不受 h1 入场缩放动画的 transform 影响），量不到时退回经验值。
+    function measureHalo(){
+      const base=Math.min(W,H);
+      const h1=document.querySelector('#sec01 h1');
+      let w=0;
+      if(h1){
+        const cs=getComputedStyle(h1);
+        const fs=parseFloat(cs.fontSize)||48;
+        ctx.save();
+        ctx.font=(cs.fontWeight||'800')+' '+fs+'px '+(cs.fontFamily||'sans-serif');
+        w=ctx.measureText('实训楼园区网络').width;
+        ctx.restore();
+      }
+      if(!(w>120)) return base*0.28;
+      // 直径≈标题宽 → 半径取其一半，放宽到 .54 让辉光刚好包住标题边缘
+      return Math.max(base*0.18, Math.min(base*0.46, w*0.54));
+    }
+    function resize(){
+      DPR=Math.min(2,window.devicePixelRatio||1);
+      W=window.innerWidth; H=window.innerHeight;
+      cx=W*0.5; cy=H*0.5;              // 圆心 = 整个画面最中间
+      haloR=measureHalo();             // 直径 ≈ 标题「实训楼园区网络」的范围
+      cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+    }
+    resize(); window.addEventListener('resize',resize);
+    // 字体加载完成后重新量一次，避免用回退字体算错直径
+    if(document.fonts && document.fonts.ready){ document.fonts.ready.then(resize); }
+
+    const words=['VLAN','OSPF','NAT','ACL','RSTP','DHCP','WPA2','USG6500E','AR6120','S5720',
+      'Eth-Trunk','Area 0','ABR','trust','untrust','802.1Q','/23','SNMP','SSH','NTP',
+      'TFTP','Campus','firewall','route','switch','172.16','WLAN','MSTP','GRE','BFD'];
+    const parts=[];
+
+    // 起点 = 光晕边沿（rim），不是最中心；沿半径方向向外飘散
+    function spawn(){
+      const ang=Math.random()*Math.PI*2;
+      const rim=haloR*(0.92+Math.random()*0.16);
+      parts.push({
+        ang, r:rim,
+        speed:30+Math.random()*70,
+        drift:(Math.random()-.5)*0.12,        // 轻微角度漂移，避免完全笔直
+        txt:words[(Math.random()*words.length)|0],
+        size:12+Math.random()*11,
+        life:0, max:4.5+Math.random()*4,
+        tint: Math.random()<0.12              // 少量品牌绿点缀，保留 Y'World 身份
+      });
+    }
+    let last=performance.now(), acc=0, raf=0, alive=false;
+    function frame(t){
+      const dt=Math.min(.05,(t-last)/1000); last=t;
+      const active=document.body.classList.contains('hero-active');
+      ctx.clearRect(0,0,W,H);
+      if(active){
+        // 中间一整个光晕（缓慢呼吸：约 11s 一个周期）
+        const pulse=0.88+0.12*Math.sin(t*0.00055);
+        const hr=haloR*pulse;
+        const g=ctx.createRadialGradient(cx,cy,0,cx,cy,hr);
+        g.addColorStop(0,   'rgba(160,245,220,0.15)');
+        g.addColorStop(0.38,'rgba(95,228,196,0.095)');
+        g.addColorStop(0.74,'rgba(62,205,178,0.04)');
+        g.addColorStop(1,   'rgba(62,205,178,0)');
+        ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+        // 光晕内核：中心更亮的一团
+        const core=ctx.createRadialGradient(cx,cy,0,cx,cy,hr*0.5);
+        core.addColorStop(0,'rgba(200,252,235,0.075)');
+        core.addColorStop(1,'rgba(200,252,235,0)');
+        ctx.fillStyle=core; ctx.fillRect(0,0,W,H);
+        // 光晕边沿：一圈极淡的环 —— 文字就是从这条边上散出去的
+        const ring=ctx.createRadialGradient(cx,cy,hr*0.82,cx,cy,hr*1.10);
+        ring.addColorStop(0,  'rgba(120,235,205,0)');
+        ring.addColorStop(0.5,'rgba(120,235,205,0.055)');
+        ring.addColorStop(1,  'rgba(120,235,205,0)');
+        ctx.fillStyle=ring; ctx.fillRect(0,0,W,H);
+
+        acc+=dt;
+        const target = W<700 ? 26 : 54;
+        if(parts.length<target && acc>0.18){ spawn(); acc=0; }
+      }
+      for(let i=parts.length-1;i>=0;i--){
+        const p=parts[i]; p.life+=dt;
+        p.r += p.speed*dt; p.ang += p.drift*dt;   // 沿半径向外
+        const px=cx+Math.cos(p.ang)*p.r, py=cy+Math.sin(p.ang)*p.r;
+        const k=p.life/p.max;
+        if(k>=1 || px<-100||px>W+100||py<-100||py>H+100){ parts.splice(i,1); continue; }
+        let a = k<0.18 ? k/0.18 : (k>0.72 ? (1-k)/0.28 : 1);
+        a*=0.5; // 低透明度，不抢风头
+        if(a<=0) continue;
+        ctx.font=p.size+'px "JetBrains Mono",ui-monospace,monospace';
+        ctx.fillStyle = p.tint ? 'rgba(53,224,176,'+a.toFixed(3)+')' : 'rgba(228,242,236,'+a.toFixed(3)+')';
+        ctx.fillText(p.txt,px,py);
+      }
+      if(active || parts.length){ raf=requestAnimationFrame(frame); }
+      else { alive=false; }
+    }
+    function start(){ if(alive) return; alive=true; last=performance.now(); raf=requestAnimationFrame(frame); }
+    function stop(){ if(!alive) return; alive=false; cancelAnimationFrame(raf); ctx.clearRect(0,0,W,H); }
+    const watch=new MutationObserver(()=>{
+      if(document.body.classList.contains('hero-active')) start(); else stop();
+    });
+    watch.observe(document.body,{attributes:true,attributeFilter:['class']});
+    if(!document.hidden && document.body.classList.contains('hero-active')) start();
+    document.addEventListener('visibilitychange',()=>{
+      if(!document.hidden && document.body.classList.contains('hero-active')) start();
+      else if(document.hidden) stop();
+    });
+  })();
+})();
 </script>
 </body>
 </html>
